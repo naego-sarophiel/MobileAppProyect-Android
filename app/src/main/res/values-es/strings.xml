@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Mi App de Suscripciones</string>
+    <string name="settings">Configuración</string>
+    <string name="theme">Tema</string>
+    <string name="currency_symbol">Símbolo de Moneda</string>
+    <string name="language">Idioma</string>
+    <string name="logout">Cerrar Sesión</string>
+    <string name="home">Inicio</string>
+    <string name="add_subscription">Añadir Suscripción</string>
+    <string name="edit_subscription">Editar Suscripción</string>
+    <string name="subscription_name">Nombre de Suscripción</string>
+    <string name="renewal_cost">Coste de Renovación</string>
+    <string name="renewal_date">Fecha de Renovación</string>
+    <string name="status">Estado</string>
+    <!-- Añade todas las strings que usas en tu UI -->
+</resources>
