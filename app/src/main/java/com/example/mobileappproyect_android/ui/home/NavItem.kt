@@ -2,6 +2,7 @@ package com.example.mobileappproyect_android.ui.home
 
 // Mantén tus importaciones actuales, solo asegúrate de estas:
 import androidx.activity.result.launch
+import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -64,9 +65,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.isEmpty
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
 import androidx.compose.ui.text.font.FontWeight // Para el texto en SubscriptionItem
 import androidx.compose.ui.text.style.TextAlign
@@ -79,6 +82,8 @@ import androidx.navigation.compose.rememberNavController
 import coil.compose.AsyncImage
 import com.example.mobileappproyect_android.R
 import com.example.mobileappproyect_android.data.Subscription
+import com.example.mobileappproyect_android.data.SubscriptionStatus
+import com.example.mobileappproyect_android.data.localizedName
 import kotlinx.coroutines.launch
 import kotlin.text.isNotEmpty
 import kotlin.text.lowercase
@@ -89,36 +94,58 @@ import kotlin.text.uppercase
 
 // Data class for Navigation Drawer Items
 data class NavItem(
-    val label: String,
+    // Ya no almacenamos el string literal aquí si lo vamos a resolver en el Composable
+    // En su lugar, podríamos tener un ID de recurso o un identificador para buscar el string.
+    // Pero para simplificar y dado que se usa directamente en el @Composable HomeScreen,
+    // podemos resolver los strings al crear la lista `navItems`.
+    val label: String, // Este será el string ya resuelto
     val icon: ImageVector,
-    val route: String // Para navigation si usas NavController for drawer items
+    val route: String
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
-    onSubscriptionClick: (String) -> Unit, // Callback for item click, passes ID
-    onAddSubscriptionClick: () -> Unit,      // Callback for FAB click
+    onSubscriptionClick: (String) -> Unit,
+    onAddSubscriptionClick: () -> Unit,
     navController: NavController
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val subscriptionsList by homeViewModel.subscriptions.collectAsStateWithLifecycle()
     val currentSortCriteria by homeViewModel.sortCriteria.collectAsStateWithLifecycle()
-    val navItems = listOf(
-        NavItem("Home", Icons.Filled.Home, "home_screen"), // Current screen
-        NavItem("Add Subscription", Icons.Filled.AddCircle, "add_subscription"),
-        NavItem("Settings", Icons.Filled.Settings, "settings")
-    )
-    var selectedItemIndex by remember { mutableStateOf(0) } // To highlight selected item
+
+    // Resuelve los strings para NavItem aquí, ya que estamos en un @Composable
+    val homeLabel = stringResource(R.string.home_nav_item_home)
+    val addSubscriptionLabel = stringResource(R.string.home_nav_item_add_subscription)
+    val settingsLabel = stringResource(R.string.home_nav_item_settings)
+
+    val navItems = remember(homeLabel, addSubscriptionLabel, settingsLabel) { // Re-calcula si los strings cambian
+        listOf(
+            NavItem(homeLabel, Icons.Filled.Home, "home_screen"),
+            NavItem(addSubscriptionLabel, Icons.Filled.AddCircle, "add_subscription"),
+            NavItem(settingsLabel, Icons.Filled.Settings, "settings")
+        )
+    }
+
+    var selectedItemIndex by remember { mutableStateOf(0) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
-    val sortOptions = listOf( // Opciones para el menú desplegable
-        SortCriteria.RENEWAL_DATE_ASC to "Sort by Renewal (Soonest)", // TODO: Usar stringResource
-        SortCriteria.PRICE_ASC to "Sort by Price (Low to High)",
-        SortCriteria.PRICE_DESC to "Sort by Price (High to Low)",
-        SortCriteria.NAME_ASC to "Sort by Name (A-Z)"
-    )
+
+    // Resuelve los strings para sortOptions aquí
+    val sortByRenewalLabel = stringResource(R.string.sort_by_renewal_soonest)
+    val sortByPriceLowHighLabel = stringResource(R.string.sort_by_price_low_high)
+    val sortByPriceHighLowLabel = stringResource(R.string.sort_by_price_high_low)
+    val sortByNameAzLabel = stringResource(R.string.sort_by_name_az)
+
+    val sortOptions = remember(sortByRenewalLabel, sortByPriceLowHighLabel, sortByPriceHighLowLabel, sortByNameAzLabel) {
+        listOf(
+            SortCriteria.RENEWAL_DATE_ASC to sortByRenewalLabel,
+            SortCriteria.PRICE_ASC to sortByPriceLowHighLabel,
+            SortCriteria.PRICE_DESC to sortByPriceHighLowLabel,
+            SortCriteria.NAME_ASC to sortByNameAzLabel
+        )
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -126,14 +153,14 @@ fun HomeScreen(
             ModalDrawerSheet {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    "Menu",
+                    stringResource(R.string.home_drawer_title_menu), // "Menu"
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(Modifier.height(16.dp))
                 navItems.forEachIndexed { index, item ->
                     NavigationDrawerItem(
-                        label = { Text(item.label) },
+                        label = { Text(item.label) }, // item.label ya es el string resuelto
                         selected = index == selectedItemIndex,
                         onClick = {
                             selectedItemIndex = index
@@ -144,6 +171,7 @@ fun HomeScreen(
                                 onAddSubscriptionClick()
                             }
                         },
+                        // La contentDescription debería ser única y descriptiva
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
@@ -154,42 +182,45 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("My Subscriptions") },
+                    title = { Text(stringResource(R.string.home_title)) }, // "My Subscriptions"
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch {
                                 if (drawerState.isClosed) drawerState.open() else drawerState.close()
                             }
                         }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Open Drawer")
+                            Icon(
+                                Icons.Filled.Menu,
+                                contentDescription = stringResource(R.string.home_drawer_open_description) // "Open Drawer"
+                            )
                         }
                     },
-                    actions = { // --- AÑADIR ACCIÓN DE ORDENACIÓN A LA TOPAPPBAR ---
+                    actions = {
                         ExposedDropdownMenuBox(
                             expanded = sortMenuExpanded,
                             onExpandedChange = { sortMenuExpanded = !sortMenuExpanded }
                         ) {
                             IconButton(
                                 onClick = { sortMenuExpanded = true },
-                                modifier = Modifier.menuAnchor() // Anclar el menú al IconButton
+                                modifier = Modifier.menuAnchor()
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Sort,
-                                    contentDescription = "Sort Subscriptions" // TODO: Usar stringResource
+                                    contentDescription = stringResource(R.string.home_sort_subscriptions_description) // "Sort Subscriptions"
                                 )
                             }
 
                             ExposedDropdownMenu(
                                 expanded = sortMenuExpanded,
                                 onDismissRequest = { sortMenuExpanded = false },
-                                modifier = Modifier.width(220.dp)
+                                modifier = Modifier.width(220.dp) // O un ancho más dinámico
                             ) {
-                                sortOptions.forEach { (criteria, label) ->
+                                sortOptions.forEach { (criteria, label) -> // label ya es el string resuelto
                                     DropdownMenuItem(
                                         text = {
                                             Text(
                                                 text = label,
-                                                modifier = Modifier.fillMaxWidth(), // Mantenlo
+                                                modifier = Modifier.fillMaxWidth(),
                                                 textAlign = TextAlign.Start
                                             )
                                         },
@@ -198,11 +229,14 @@ fun HomeScreen(
                                             sortMenuExpanded = false
                                         },
                                         leadingIcon = if (currentSortCriteria == criteria) {
-                                            { Icon(Icons.Filled.Check, contentDescription = "Selected") }
+                                            {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = stringResource(R.string.home_sort_selected_description) // "Selected sort criteria"
+                                                )
+                                            }
                                         } else null,
-                                        // modifier = Modifier.fillMaxWidth(), // Este en el DropdownMenuItem en sí podría no ser necesario si el Text interno ya se expande
-                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp) // Ajusta este padding
-                                        // Prueba incluso con PaddingValues(0.dp) temporalmente para diagnosticar
+                                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 0.dp)
                                     )
                                 }
                             }
@@ -216,11 +250,13 @@ fun HomeScreen(
             },
             floatingActionButton = {
                 FloatingActionButton(onClick = onAddSubscriptionClick) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add Subscription")
+                    Icon(
+                        Icons.Filled.Add,
+                        contentDescription = stringResource(R.string.home_fab_add_subscription_description) // "Add Subscription"
+                    )
                 }
             }
         ) { paddingValues ->
-            // --- USA subscriptionsList AQUÍ ---
             if (subscriptionsList.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -229,7 +265,7 @@ fun HomeScreen(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("No subscriptions added yet. Tap '+' to add one!")
+                    Text(stringResource(R.string.home_no_subscriptions)) // "No subscriptions added yet..."
                 }
             } else {
                 LazyColumn(
@@ -237,11 +273,10 @@ fun HomeScreen(
                         .fillMaxSize()
                         .padding(paddingValues),
                     contentPadding = PaddingValues(vertical = 8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp) // Añade espacio entre items
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(subscriptionsList, key = { it.id }) { subscription -> // 'subscription' es cada objeto
+                    items(subscriptionsList, key = { it.id }) { subscription ->
                         val isSoon = homeViewModel.isRenewalSoon(subscription.renewalDate)
-                        // LLAMADA A LA ÚNICA Y CORRECTA SubscriptionItem
                         SubscriptionItem(
                             subscription = subscription,
                             isRenewalSoon = isSoon,
@@ -255,13 +290,9 @@ fun HomeScreen(
 }
 
 
-// Composable para cada ítem de suscripción (ejemplo básico, necesita estar definido)
-// Asumo que tienes un Composable SubscriptionItem.kt, si no, aquí hay una estructura.
-// ASEGÚRATE DE QUE ESTE SubscriptionItem ESTÉ DEFINIDO EN ALGÚN LUGAR.
-// Lo incluyo aquí para completitud, basado en mi respuesta anterior.
 @Composable
 fun SubscriptionItem(
-    subscription: Subscription, // Asegúrate que este 'Subscription' es tu data class correcta
+    subscription: Subscription,
     isRenewalSoon: Boolean,
     onClick: () -> Unit
 ) {
@@ -279,43 +310,39 @@ fun SubscriptionItem(
         ) {
             AsyncImage(
                 model = subscription.imageUrl,
-                contentDescription = "${subscription.name} logo",
+                // Content description más específico para la imagen
+                contentDescription = stringResource(R.string.subscription_item_logo_description, subscription.name),
                 modifier = Modifier
                     .size(56.dp)
-                    .clip(CircleShape), // O RoundedCornerShape(8.dp)
+                    .clip(CircleShape),
                 contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.ic_placeholder_image),
-                error = painterResource(id = R.drawable.ic_placeholder_image)
+                placeholder = painterResource(id = R.drawable.ic_placeholder_image), // Asumo que esto no cambia con el idioma
+                error = painterResource(id = R.drawable.ic_placeholder_image) // Asumo que esto no cambia con el idioma
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = subscription.name,
+                    text = subscription.name, // El nombre viene de los datos, no de strings.xml
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "Renews: ${subscription.renewalDate}",
+                    // Usar stringResource para el prefijo "Renews: "
+                    text = stringResource(R.string.subscription_item_renews_prefix) + " ${subscription.renewalDate}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (isRenewalSoon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = run {
-                        val lowerCasedStatus = subscription.status.name.replace("_", " ").lowercase()
-                        if (lowerCasedStatus.isNotEmpty()) {
-                            lowerCasedStatus.substring(0, 1).uppercase(java.util.Locale.getDefault()) + lowerCasedStatus.substring(1)
-                        } else {
-                            lowerCasedStatus
-                        }
-                    },
+                    text = subscription.status.localizedName(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant, // Color del texto del estado
                     modifier = Modifier
                         .background(
+                            // El color del fondo del estado depende de la lógica, no de strings.xml
                             color = statusColor(subscription.status).copy(alpha = 0.1f),
                             shape = RoundedCornerShape(4.dp)
                         )
@@ -324,6 +351,7 @@ fun SubscriptionItem(
             }
             Spacer(modifier = Modifier.width(16.dp))
             Text(
+                // El símbolo de moneda y el costo vienen de los datos
                 text = "${subscription.currencySymbol}${String.format("%.2f", subscription.cost)}",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold
@@ -331,5 +359,4 @@ fun SubscriptionItem(
         }
     }
 }
-
 

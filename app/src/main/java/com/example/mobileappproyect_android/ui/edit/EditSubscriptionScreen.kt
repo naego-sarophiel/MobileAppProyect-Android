@@ -2,14 +2,14 @@ package com.example.mobileappproyect_android.ui.edit
 
 import android.Manifest
 import android.app.DatePickerDialog
-import android.content.Context
+// import android.content.Context // No se usa directamente en la función principal después del cambio
 import android.net.Uri
 import android.os.Build
-import android.widget.DatePicker
+// import android.widget.DatePicker // No se usa directamente
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.Image
+// import androidx.compose.foundation.Image // No se usa directamente
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -26,22 +26,25 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+// import androidx.compose.runtime.getValue // No es necesario si se usa by
+// import androidx.compose.runtime.setValue // No es necesario si se usa by
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.graphics.Color
+// import androidx.compose.ui.graphics.Color // No se usa directamente
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.semantics.dismiss
+// import androidx.compose.ui.res.painterResource // No se usa directamente aquí
+import androidx.compose.ui.res.stringResource // ¡IMPORTANTE!
+// import androidx.compose.ui.semantics.dismiss // No se usa directamente
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.example.mobileappproyect_android.R // Your placeholder
+import com.example.mobileappproyect_android.R // ¡IMPORTANTE para R.string!
 import com.example.mobileappproyect_android.data.Subscription
 import com.example.mobileappproyect_android.data.SubscriptionStatus
 import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
@@ -53,12 +56,11 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
 import java.util.UUID
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
-import androidx.compose.material3.ExposedDropdownMenuDefaults // Asegúrate que está
-import androidx.compose.material3.ExposedDropdownMenuBox // Asegúrate que está
-import androidx.compose.ui.res.stringResource
-import androidx.compose.material3.DropdownMenuItem
+// import com.google.accompanist.permissions.isGranted // Duplicado
+// import com.google.accompanist.permissions.rememberPermissionState // Duplicado
+// import androidx.compose.material3.ExposedDropdownMenuDefaults // No es necesario si se usa el que viene por defecto
+// import androidx.compose.material3.ExposedDropdownMenuBox // No es necesario si se usa el que viene por defecto
+// import androidx.compose.material3.DropdownMenuItem // No es necesario si se usa el que viene por defecto
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
@@ -66,20 +68,13 @@ fun EditSubscriptionScreen(
     subscriptionToEdit: Subscription?,
     onSaveSubscription: (Subscription) -> Unit,
     onNavigateBack: () -> Unit
-    // Podrías pasar el SettingsManager o el currentDisplayCurrency si el enfoque de edición fuera diferente
 ) {
     val context = LocalContext.current
     var name by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.name ?: "") }
-
-    // --- MANEJO DEL PRECIO ---
-    // Ahora 'costString' representará el 'baseCost'
     var baseCostString by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.baseCost?.toString() ?: "") }
-    // Asumimos una moneda base por defecto si es nueva, o la de la suscripción existente
     var baseCurrency by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.baseCurrency ?: "USD") }
-    // Podrías tener un Dropdown para cambiar `baseCurrency` si lo deseas. Por ahora, lo mantenemos simple.
-    var baseCurrencyExpanded by remember { mutableStateOf(false) } // Estado para controlar si el dropdown está expandido
-    val baseCurrencyOptions = listOf("USD", "EUR", "GBP", "JPY", "INR") // Tus monedas base soportadas
-
+    // var baseCurrencyExpanded by remember { mutableStateOf(false) } // Se define más abajo si es necesario
+    val baseCurrencyOptions = listOf("USD", "EUR", "GBP", "JPY", "INR") // Símbolos, generalmente no localizados directamente
 
     var renewalDate by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.renewalDate ?: LocalDate.now()) }
     var imageUri by remember(subscriptionToEdit) { mutableStateOf<Uri?>(subscriptionToEdit?.imageUrl?.let { Uri.parse(it) }) }
@@ -97,42 +92,71 @@ fun EditSubscriptionScreen(
     val readStoragePermission = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         Manifest.permission.READ_EXTERNAL_STORAGE
     } else {
-        null
+        null // Para Android Q y superior, no se necesita permiso para GetContent si solo lees tu propia app o de MediaStore
     }
     val permissionState = readStoragePermission?.let { rememberPermissionState(permission = it) }
+
+    // --- Strings para los estados de suscripción ---
+    val statusActiveLabel = stringResource(R.string.subscription_status_active)
+    val statusPausedLabel = stringResource(R.string.subscription_status_paused)
+    val statusCanceledLabel = stringResource(R.string.subscription_status_canceled)
+    val statusPendingPaymentLabel = stringResource(R.string.subscription_status_pending_payment)
+
+    val subscriptionStatusOptions = remember(statusActiveLabel, statusPausedLabel, statusCanceledLabel, statusPendingPaymentLabel) {
+        mapOf(
+            SubscriptionStatus.ACTIVE to statusActiveLabel,
+            SubscriptionStatus.PAUSED to statusPausedLabel,
+            SubscriptionStatus.CANCELED to statusCanceledLabel,
+            SubscriptionStatus.PENDING_PAYMENT to statusPendingPaymentLabel
+        )
+    }
+    val currentStatusLabel = subscriptionStatusOptions[status] ?: status.name // Fallback al nombre del enum
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (subscriptionToEdit != null) stringResource(R.string.edit_subscription) else stringResource(R.string.add_subscription)) },
+                title = {
+                    Text(
+                        if (subscriptionToEdit != null) stringResource(R.string.edit_subscription_title_edit)
+                        else stringResource(R.string.edit_subscription_title_add)
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.edit_subscription_back_description)
+                        )
                     }
                 },
                 actions = {
                     IconButton(onClick = {
-                        val baseCostValue = baseCostString.toDoubleOrNull() // Validar baseCost
-
+                        val baseCostValue = baseCostString.toDoubleOrNull()
                         if (name.isNotBlank() && baseCostValue != null) {
                             val newOrUpdatedSubscription = Subscription(
                                 id = subscriptionToEdit?.id ?: UUID.randomUUID().toString(),
                                 name = name,
                                 imageUrl = imageUri?.toString(),
                                 renewalDate = renewalDate,
-                                baseCost = baseCostValue, // Guardar el baseCost editado
-                                baseCurrency = baseCurrency, // Usar la baseCurrency (fija o seleccionada)
-                                cost = 0.0, // Se recalculará por el ViewModel
-                                currencySymbol = "", // Se recalculará por el ViewModel
+                                baseCost = baseCostValue,
+                                baseCurrency = baseCurrency,
+                                cost = 0.0, // Se recalculará
+                                currencySymbol = "", // Se recalculará
                                 status = status
                             )
                             onSaveSubscription(newOrUpdatedSubscription)
                         } else {
-                            // Show error message (e.g., using a Snackbar)
-                            Toast.makeText(context, "Please fill all fields correctly.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                context.getString(R.string.edit_subscription_error_fill_fields), // Usar context.getString para Toast
+                                Toast.LENGTH_SHORT
+                            ).show()
                         }
                     }) {
-                        Icon(Icons.Filled.Check, contentDescription = "Save Subscription")
+                        Icon(
+                            Icons.Filled.Check,
+                            contentDescription = stringResource(R.string.edit_subscription_save_description)
+                        )
                     }
                 }
             )
@@ -142,7 +166,7 @@ fun EditSubscriptionScreen(
             modifier = Modifier
                 .padding(paddingValues)
                 .padding(16.dp)
-                .verticalScroll(rememberScrollState()) // Make content scrollable
+                .verticalScroll(rememberScrollState())
         ) {
             // Image Section
             Box(
@@ -151,10 +175,10 @@ fun EditSubscriptionScreen(
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.surfaceVariant)
                     .clickable {
-                        if (readStoragePermission == null || permissionState == null || permissionState.status.isGranted) {
+                        if (readStoragePermission == null || permissionState?.status?.isGranted == true) {
                             imagePickerLauncher.launch("image/*")
                         } else {
-                            permissionState.launchPermissionRequest()
+                            permissionState?.launchPermissionRequest()
                         }
                     }
                     .align(Alignment.CenterHorizontally),
@@ -163,18 +187,18 @@ fun EditSubscriptionScreen(
                 if (imageUri != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageUri) // Load from local URI
+                            .data(imageUri)
                             .crossfade(true)
-                            .error(R.drawable.ic_placeholder_image)
+                            .error(R.drawable.ic_placeholder_image) // Asumiendo que este placeholder no necesita localización
                             .build(),
-                        contentDescription = "Subscription Image",
+                        contentDescription = stringResource(R.string.edit_subscription_image_description),
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
                     )
                 } else {
                     Icon(
                         Icons.Filled.PhotoCamera,
-                        contentDescription = "Add Image",
+                        contentDescription = stringResource(R.string.edit_subscription_add_image_icon_description),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(48.dp)
                     )
@@ -182,7 +206,7 @@ fun EditSubscriptionScreen(
             }
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Tap to change image",
+                stringResource(R.string.edit_subscription_tap_to_change_image),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
@@ -192,13 +216,13 @@ fun EditSubscriptionScreen(
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.subscription_name)) },
+                label = { Text(stringResource(R.string.edit_subscription_label_name)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
                 singleLine = true
             )
-            LaunchedEffect(Unit) { // Request focus on the first field when screen opens
+            LaunchedEffect(Unit) {
                 if (subscriptionToEdit == null) focusRequester.requestFocus()
             }
 
@@ -207,72 +231,86 @@ fun EditSubscriptionScreen(
             OutlinedTextField(
                 value = baseCostString,
                 onValueChange = { baseCostString = it },
-                label = { Text("${stringResource(R.string.renewal_cost)} (${baseCurrency})") },
+                label = { Text(stringResource(R.string.edit_subscription_label_renewal_cost, baseCurrency)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true
             )
             Spacer(modifier = Modifier.height(16.dp))
+
+            // Selector de Moneda Base
             var baseCurrencyExpanded by remember { mutableStateOf(false) }
-            val baseCurrencyOptions = listOf("USD", "EUR", "GBP") // Tus monedas base soportadas
             ExposedDropdownMenuBox(
                 expanded = baseCurrencyExpanded,
-                onExpandedChange = {
-                    baseCurrencyExpanded = !baseCurrencyExpanded // Alternar el estado al hacer clic
-                },
-                modifier = Modifier.fillMaxWidth() // Asegúrate de que el Box ocupe el ancho
+                onExpandedChange = { baseCurrencyExpanded = !baseCurrencyExpanded },
+                modifier = Modifier.fillMaxWidth()
             ) {
-                OutlinedTextField( // Este es el campo que se muestra
-                    value = baseCurrency, // Muestra la moneda base seleccionada
-                    onValueChange = {}, // No se cambia directamente aquí
+                OutlinedTextField(
+                    value = baseCurrency,
+                    onValueChange = {},
                     readOnly = true,
-                    label = { Text("Base Currency") }, // TODO: Usar stringResource
+                    label = { Text(stringResource(R.string.edit_subscription_label_base_currency)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseCurrencyExpanded) },
                     modifier = Modifier
-                        .menuAnchor() // IMPORTANTE: Esto ancla el menú al TextField
+                        .menuAnchor()
                         .fillMaxWidth()
                 )
                 ExposedDropdownMenu(
                     expanded = baseCurrencyExpanded,
-                    onDismissRequest = { baseCurrencyExpanded = false } // Cerrar si se hace clic fuera
+                    onDismissRequest = { baseCurrencyExpanded = false }
                 ) {
                     baseCurrencyOptions.forEach { selectionOption ->
                         DropdownMenuItem(
-                            text = { Text(selectionOption) },
+                            text = { Text(selectionOption) }, // Símbolos de moneda generalmente no se localizan
                             onClick = {
-                                baseCurrency = selectionOption // Actualizar la moneda seleccionada
-                                baseCurrencyExpanded = false // Cerrar el menú
+                                baseCurrency = selectionOption
+                                baseCurrencyExpanded = false
                             }
                         )
                     }
                 }
             }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Renewal Date Picker
+            // Selector de Fecha de Renovación
             OutlinedTextField(
-                value = renewalDate.format(DateTimeFormatter.ofLocalizedDate(java.time.format.FormatStyle.MEDIUM)),
-                onValueChange = { /* Read Only */ },
-                label = { Text("Renewal Date") },
+                value = renewalDate.format(DateTimeFormatter.ISO_LOCAL_DATE), // Formato estándar
+                onValueChange = { /* No se cambia directamente */ },
+                label = { Text(stringResource(R.string.edit_subscription_label_renewal_date)) },
                 readOnly = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true },
                 trailingIcon = {
-                    Icon(Icons.Filled.CalendarToday, "Select Date", Modifier.clickable { showDatePicker = true })
-                }
+                    IconButton(onClick = { showDatePicker = true }) {
+                        Icon(
+                            Icons.Filled.CalendarToday,
+                            contentDescription = stringResource(R.string.edit_subscription_calendar_icon_description)
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth()
             )
 
             if (showDatePicker) {
-                ShowDatePickerDialog(context, renewalDate) { selectedDate ->
-                    renewalDate = selectedDate
-                    showDatePicker = false
+                val calendar = Calendar.getInstance()
+                calendar.time = java.util.Date.from(renewalDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+                DatePickerDialog(
+                    context,
+                    { _, year, month, dayOfMonth ->
+                        renewalDate = LocalDate.of(year, month + 1, dayOfMonth)
+                        showDatePicker = false
+                    },
+                    calendar.get(Calendar.YEAR),
+                    calendar.get(Calendar.MONTH),
+                    calendar.get(Calendar.DAY_OF_MONTH)
+                ).apply {
+                    setOnDismissListener { showDatePicker = false } // Asegurar que se cierra el diálogo
+                    show()
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Status Dropdown
+            // Selector de Estado de Suscripción
             var statusExpanded by remember { mutableStateOf(false) }
             ExposedDropdownMenuBox(
                 expanded = statusExpanded,
@@ -280,17 +318,10 @@ fun EditSubscriptionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = run { // Apply the same logic here
-                        val lowerCasedName = status.name.replace("_", " ").lowercase()
-                        if (lowerCasedName.isNotEmpty()) {
-                            lowerCasedName.substring(0, 1).uppercase(java.util.Locale.getDefault()) + lowerCasedName.substring(1)
-                        } else {
-                            lowerCasedName
-                        }
-                    },
+                    value = currentStatusLabel, // Mostrar el label localizado
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(R.string.status)) },
+                    label = { Text(stringResource(R.string.edit_subscription_label_status)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusExpanded) },
                     modifier = Modifier
                         .menuAnchor()
@@ -300,93 +331,51 @@ fun EditSubscriptionScreen(
                     expanded = statusExpanded,
                     onDismissRequest = { statusExpanded = false }
                 ) {
-                    SubscriptionStatus.values().forEach { selectionOption ->
+                    subscriptionStatusOptions.forEach { (statusEnum, label) ->
                         DropdownMenuItem(
-                            text = {
-                                Text(run { // And here for each item in the dropdown
-                                    val lowerCasedOption = selectionOption.name.replace("_", " ").lowercase()
-                                    if (lowerCasedOption.isNotEmpty()) {
-                                        lowerCasedOption.substring(0, 1).uppercase(java.util.Locale.getDefault()) + lowerCasedOption.substring(1)
-                                    } else {
-                                        lowerCasedOption
-                                    }
-                                })
-                            },
+                            text = { Text(label) }, // Usar el label localizado
                             onClick = {
-                                status = selectionOption
+                                status = statusEnum
                                 statusExpanded = false
                             }
                         )
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 }
 
+// Preview (opcional, pero útil)
+@Preview(showBackground = true, name = "Edit Subscription Screen Light")
 @Composable
-fun ShowDatePickerDialog(
-    context: Context,
-    initialDate: LocalDate,
-    onDateSelected: (LocalDate) -> Unit
-) {
-    val year = initialDate.year
-    val month = initialDate.monthValue - 1 // Calendar month is 0-indexed
-    val day = initialDate.dayOfMonth
-
-    val datePickerDialog = remember {
-        DatePickerDialog(
-            context,
-            { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDayOfMonth: Int ->
-                onDateSelected(LocalDate.of(selectedYear, selectedMonth + 1, selectedDayOfMonth))
-            }, year, month, day
-        )
-    }
-    // To ensure the dialog is recreated if initialDate changes significantly or context changes
-    // though for this specific use case, direct launch is fine.
-    LaunchedEffect(datePickerDialog) {
-        datePickerDialog.show()
-    }
-    // Handle dialog dismissal (optional, if you need to react to it)
-    DisposableEffect(Unit) {
-        onDispose {
-            if (datePickerDialog.isShowing) {
-                datePickerDialog.dismiss()
-            }
-        }
-    }
-}
-
-
-@Preview(showBackground = true, name = "Edit Screen Light")
-@Composable
-fun EditSubscriptionScreenPreviewLight() {
+fun EditSubscriptionScreenPreview() {
     MobileAppProyectAndroidTheme {
         EditSubscriptionScreen(
-            subscriptionToEdit = Subscription(
-                id = "1",
-                name = "Sample Service",
-                imageUrl = null, //"https://via.placeholder.com/150",
-                renewalDate = LocalDate.now().plusDays(10),
-                baseCost = 19.99,
-                baseCurrency = "USD",
-                currencySymbol = "$",
-                cost = 19.99,
-                status = SubscriptionStatus.ACTIVE
-            ),
+            subscriptionToEdit = null, // Para "Add"
             onSaveSubscription = {},
             onNavigateBack = {}
         )
     }
 }
 
-@Preview(showBackground = true, name = "Add Screen Light")
+@Preview(showBackground = true, name = "Edit Subscription Screen Dark - Editing")
 @Composable
-fun AddSubscriptionScreenPreviewLight() {
-    MobileAppProyectAndroidTheme {
+fun EditSubscriptionScreenEditPreview() {
+    MobileAppProyectAndroidTheme(darkTheme = true) {
         EditSubscriptionScreen(
-            subscriptionToEdit = null, // For "Add" mode
+            subscriptionToEdit = Subscription( // Datos de ejemplo
+                id = "1",
+                name = "Sample Service",
+                imageUrl = null,
+                renewalDate = LocalDate.now().plusMonths(1),
+                baseCost = 9.99,
+                baseCurrency = "USD",
+                cost = 9.99,
+                currencySymbol = "$",
+                status = SubscriptionStatus.ACTIVE
+            ),
             onSaveSubscription = {},
             onNavigateBack = {}
         )

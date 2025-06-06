@@ -12,5 +12,65 @@
     <string name="renewal_cost">Coste de Renovación</string>
     <string name="renewal_date">Fecha de Renovación</string>
     <string name="status">Estado</string>
+
+    <string name="login_title_screen">Iniciar Sesión</string>
+    <string name="login_username_label">Usuario</string>
+    <string name="login_password_label">Contraseña</string>
+    <string name="login_password_hide_description">Pulsar aquí para ocultar la contraseña</string>
+    <string name="login_password_show_description">Pulsar aquí para mostrar la contraseña</string>
+    <string name="login_button_text_login">Iniciar Sesión</string>
+
+    <string name="settings_theme_light">Claro</string>
+    <string name="settings_theme_dark">Oscuro</string>
+    <string name="settings_theme_system">Predeterminado del Sistema</string>
+    <string name="settings_language_english">Inglés</string>
+    <string name="settings_language_spanish">Español</string>
+    <string name="settings_title">Configuración</string> <!-- Cambiado de "Title" genérico -->
+    <string name="settings_navigate_back_description">Volver</string>
+    <string name="settings_section_appearance">Apariencia</string>
+    <string name="settings_theme_title">Tema</string>
+    <string name="settings_section_preferences">Preferencias</string>
+    <string name="settings_currency_title">Símbolo de Moneda</string>
+    <string name="settings_language_title">Idioma</string>
+    <string name="settings_section_account">Cuenta</string>
+    <string name="settings_logout_icon_description">Icono de Cerrar Sesión</string>
+    <string name="settings_logout_button">Cerrar Sesión</string>
+
+    <string name="home_nav_item_home">Inicio</string> <!-- Cambiado para consistencia con "home" -->
+    <string name="home_nav_item_add_subscription">Añadir Suscripción</string>
+    <string name="home_nav_item_settings">Configuración</string>
+    <string name="sort_by_renewal_soonest">Ordenar por Renovación (Más Próxima)</string>
+    <string name="sort_by_price_low_high">Ordenar por Precio (Menor a Mayor)</string>
+    <string name="sort_by_price_high_low">Ordenar por Precio (Mayor a Menor)</string>
+    <string name="sort_by_name_az">Ordenar por Nombre (A-Z)</string>
+    <string name="home_drawer_title_menu">Menú</string>
+    <string name="home_title">Mis Suscripciones</string>
+    <string name="home_drawer_open_description">Abrir Menú Lateral</string>
+    <string name="home_sort_subscriptions_description">Ordenar Suscripciones</string>
+    <string name="home_sort_selected_description">Criterio de ordenación seleccionado</string>
+    <string name="home_fab_add_subscription_description">Añadir Suscripción</string>
+    <string name="home_no_subscriptions">Aún no has añadido suscripciones...</string>
+
+    <string name="subscription_item_logo_description">Logo de %1$s</string> <!-- %1$s será el nombre de la suscripción -->
+    <string name="subscription_item_renews_prefix">Renovación:</string> <!-- O "Renueva:" -->
+    <string name="subscription_status_active">Activa</string> <!-- Femenino para concordar con "Suscripción" -->
+    <string name="subscription_status_paused">Pausada</string>
+    <string name="subscription_status_canceled">Cancelada</string>
+    <string name="subscription_status_pending_payment">Pago Pendiente</string>
+
+    <string name="edit_subscription_title_edit">Editar Suscripción</string>
+    <string name="edit_subscription_title_add">Añadir Suscripción</string>
+    <string name="edit_subscription_back_description">Volver</string>
+    <string name="edit_subscription_error_fill_fields">Rellena todos los campos para guardar</string>
+    <string name="edit_subscription_save_description">Guardar</string>
+    <string name="edit_subscription_image_description">Logo de la Imagen</string>
+    <string name="edit_subscription_add_image_icon_description">Añadir Imagen</string>
+    <string name="edit_subscription_tap_to_change_image">Pulsa para cambiar la imagen</string>
+    <string name="edit_subscription_label_name">Nombre de la Suscripción</string>
+    <string name="edit_subscription_label_renewal_cost">Coste de Renovación (%1$s)</string>
+    <string name="edit_subscription_label_base_currency">Moneda Base</string>
+    <string name="edit_subscription_label_renewal_date">Fecha de Renovación</string>
+    <string name="edit_subscription_calendar_icon_description">Icono de Calendario</string>
+    <string name="edit_subscription_label_status">Estado</string>
     <!-- Añade todas las strings que usas en tu UI -->
 </resources>

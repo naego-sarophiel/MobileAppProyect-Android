@@ -1,59 +1,120 @@
-package com.example.mobileappproyect_android // Your project's package name
+package com.example.mobileappproyect_android
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
-// import android.widget.Toast // Uncomment if you want to use Toast for simple feedback
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.result.launch
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.appcompat.app.AppCompatDelegate // Para el tema
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Para observar el tema
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.mobileappproyect_android.data.AppTheme
 import com.example.mobileappproyect_android.data.SettingsManager
-import com.example.mobileappproyect_android.ui.settings.SettingsScreen // Importar SettingsScreen
-import com.example.mobileappproyect_android.ui.settings.SettingsViewModel
-// import androidx.compose.ui.platform.LocalContext // Uncomment for Toast
+import com.example.mobileappproyect_android.ui.settings.SettingsScreen
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.viewmodel.compose.viewModel // Import for viewModel()
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-// Make sure you have a theme defined, or remove this import and the Theme wrapper
-import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme // Your project's theme
-
-// Import your LoginScreen, HomeScreen, and HomeViewModel
-import com.example.mobileappproyect_android.LoginScreen // Assuming LoginScreen.kt is in this package
-import com.example.mobileappproyect_android.ui.home.HomeScreen // Assuming HomeScreen.kt is in ui.home
-import com.example.mobileappproyect_android.ui.home.HomeViewModel // Assuming HomeViewModel.kt is in ui.home
-import androidx.navigation.NavType
-import androidx.navigation.navArgument
-import com.example.mobileappproyect_android.ui.edit.EditSubscriptionScreen // Import EditScreen
-import androidx.compose.runtime.getValue // Importación para el delegado 'by'
+import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
+import com.example.mobileappproyect_android.ui.home.HomeScreen
+import com.example.mobileappproyect_android.ui.home.HomeViewModel
+import com.example.mobileappproyect_android.ui.edit.EditSubscriptionScreen
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.launch // Importación para CoroutineScope.launch
+import androidx.compose.ui.res.stringResource
+import kotlinx.coroutines.launch
+import android.widget.Toast
+//import androidx.compose.ui.text.intl.Locale
+import android.content.res.Configuration
+import androidx.activity.viewModels
+import com.example.mobileappproyect_android.ui.settings.SettingsViewModel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
+import java.util.Locale
 
 class MainActivity : ComponentActivity() {
-    private lateinit var settingsManager: SettingsManager // Para observar el tema
+    private lateinit var settingsManager: SettingsManager
+    companion object {
+        fun applySelectedLanguageToContext(baseContext: Context, languageCode: String): Context {
+            val localeToApply = Locale(languageCode)
+            Locale.setDefault(localeToApply)
+
+            val currentConfig = baseContext.resources.configuration
+            // AQUÍ ES DONDE PODRÍA HABER ESTADO EL ERROR:
+            val newConfig = Configuration(currentConfig) // Asegúrate de que esto sea android.content.res.Configuration
+            newConfig.setLocale(localeToApply)
+            // newConfig.setLayoutDirection(localeToApply)
+
+            Log.d("ContextWrapper", "Aplicando Locale '$languageCode' al contexto. Config original: ${currentConfig.locales[0]}, Nueva config: ${newConfig.locales[0]}")
+            return baseContext.createConfigurationContext(newConfig)
+        }
+    }
+
+    override fun attachBaseContext(newBase: Context) {
+        // Este método se llama antes de onCreate().
+        // Es el lugar ideal para configurar el Locale de la Activity.
+
+        // 1. Inicializa SettingsManager aquí para poder leer el idioma.
+        //    Nota: applicationContext está disponible en newBase.
+        val localSettingsManager = SettingsManager(newBase.applicationContext)
+
+        // 2. Lee el idioma guardado de forma síncrona.
+        //    runBlocking es aceptable aquí porque attachBaseContext debe ser rápido y esto es crucial.
+        val languageCodeToApply = runBlocking {
+            localSettingsManager.languageFlow.first()
+        }
+        Log.d("MainActivity", "attachBaseContext - Idioma leído de SettingsManager: $languageCodeToApply")
+
+        // 3. Crea un nuevo contexto con el idioma aplicado y pásalo a super.attachBaseContext.
+        val contextWithUpdatedLanguage = applySelectedLanguageToContext(newBase, languageCodeToApply)
+        super.attachBaseContext(contextWithUpdatedLanguage)
+
+        // Opcional: También puedes llamar a AppCompatDelegate aquí si quieres ser redundante,
+        // pero el cambio de contexto de la Activity es lo más directo.
+        // val appLocale = LocaleListCompat.forLanguageTags(languageCodeToApply)
+        // AppCompatDelegate.setApplicationLocales(appLocale) // Podría ser útil para otros componentes de AppCompat
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         settingsManager = SettingsManager(applicationContext)
 
-        // Observar el flujo del tema para aplicarlo dinámicamente
-        // Esto es un enfoque. Otro es que SettingsScreen lo maneje con AppCompatDelegate
-        // y la Activity se recree si es necesario, o que el Composable raíz lea el tema.
-        // Este ejemplo aplica el tema directamente a AppCompatDelegate.
-        lifecycleScope.launch { // Necesitas 'androidx.lifecycle:lifecycle-runtime-ktx'
+        val initialActivityLocale = resources.configuration.locales[0].toLanguageTag()
+        Log.d("MainActivity", "onCreate - Idioma inicial de resources: $initialActivityLocale")
+
+        lifecycleScope.launch {
+            // Observar el flujo del idioma guardado
+            settingsManager.languageFlow
+                .collect { savedLanguageCode ->
+                    Log.d("MainActivity", "Observado nuevo languageCode de SettingsManager: $savedLanguageCode")
+                    val currentActivityLocale = resources.configuration.locales[0].toLanguageTag()
+                    Log.d("MainActivity", "Idioma actual de la actividad: $currentActivityLocale")
+
+                    // Solo recrear si el idioma guardado es diferente al idioma actual de la actividad
+                    // y no es la configuración inicial donde podrían ser iguales tras una recreación previa.
+                    // Esta condición puede necesitar ajuste para evitar bucles si el cambio de idioma no es perfecto.
+                    if (savedLanguageCode != currentActivityLocale.take(2)) { // Compara solo el código base "en", "es"
+                        Log.d("MainActivity", "El idioma guardado ($savedLanguageCode) es diferente al de la actividad ($currentActivityLocale). Recreando...")
+                        recreate()
+                    } else {
+                        Log.d("MainActivity", "El idioma guardado ($savedLanguageCode) coincide con el de la actividad ($currentActivityLocale) o es configuración inicial. No se recrea por esta vía.")
+                    }
+                }
+        }
+
+        // --- Lógica del tema (puede quedarse) ---
+        lifecycleScope.launch {
             settingsManager.uiThemeFlow.collect { theme ->
                 val mode = when (theme) {
                     AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
@@ -63,30 +124,24 @@ class MainActivity : ComponentActivity() {
                 AppCompatDelegate.setDefaultNightMode(mode)
             }
         }
-        // Aplicar el idioma guardado al inicio
-        // Esto debe hacerse antes de setContent si afecta a los recursos iniciales.
-        // El cambio de idioma a través de AppCompatDelegate.setApplicationLocales
-        // ya se encarga de reiniciar la Activity.
-        // Si tienes una lógica más compleja, puedes necesitar un BaseActivity.
-        // Por ahora, el cambio desde SettingsScreen que reinicia la Activity es suficiente.
 
         setContent {
-            // Recolectar el estado del tema para pasarlo al Composable del tema de Compose
             val currentThemeSetting by settingsManager.uiThemeFlow.collectAsStateWithLifecycle(initialValue = AppTheme.SYSTEM)
 
             MobileAppProyectAndroidTheme(
                 darkTheme = when (currentThemeSetting) {
                     AppTheme.LIGHT -> false
                     AppTheme.DARK -> true
-                    AppTheme.SYSTEM -> isSystemInDarkTheme() // Usa el sistema si es la opción
+                    AppTheme.SYSTEM -> isSystemInDarkTheme()
                 }
-                // dynamicColor: Boolean = true, // Si usas color dinámico
             ) {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation(settingsManager = settingsManager) // Pasa settingsManager si es necesario
+                    Column { // Envuelve en una columna si tienes más elementos
+                        AppNavigation(settingsManager = settingsManager)
+                    }
                 }
             }
         }
@@ -94,7 +149,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun AppNavigation(settingsManager: SettingsManager) { // settingsManager opcional aquí, depende de dónde lo necesites
+fun AppNavigation(settingsManager: SettingsManager) {
     val navController = rememberNavController()
     val homeViewModel: HomeViewModel = viewModel()
 
@@ -106,42 +161,36 @@ fun AppNavigation(settingsManager: SettingsManager) { // settingsManager opciona
                         popUpTo("login") { inclusive = true }
                     }
                 }
+                // Asumo que LoginScreen internamente usa stringResources para sus textos
             )
         }
         composable("home") {
-            // homeViewModel is already available if hoisted, or use viewModel() here again
             HomeScreen(
                 homeViewModel = homeViewModel,
-                onSubscriptionClick = { subscriptionId -> // subscriptionId es el String del NavItem
+                onSubscriptionClick = { subscriptionId ->
                     val subscriptionObject = homeViewModel.subscriptions.value.find { it.id == subscriptionId }
                     if (subscriptionObject != null) {
-                        // --- CORRECCIÓN AQUÍ ---
-                        // Si onSubscriptionSelectedForEdit ahora espera un Subscription?,
-                        // entonces pasa el objeto `subscriptionObject` que encontraste.
                         homeViewModel.onSubscriptionSelectedForEdit(subscriptionObject)
                         navController.navigate("edit_subscription")
                     } else {
-                        // Opcional: Manejar el caso donde no se encuentra la suscripción,
-                        // aunque esto no debería ocurrir si el ID viene de un elemento de la lista.
-                        println("Error: Subscription with ID $subscriptionId not found.")
+                        // Este es un mensaje de error/log, podría quedar como está o usar un string si se muestra al usuario
+                        Log.e("AppNavigation", "Error: Subscription with ID $subscriptionId not found.")
+                        // Si fuera un Toast:
+                        // Toast.makeText(LocalContext.current, stringResource(R.string.error_subscription_not_found, subscriptionId), Toast.LENGTH_SHORT).show()
                     }
                 },
                 onAddSubscriptionClick = {
-                    homeViewModel.clearSelectedSubscription() // Ensure no old selection
-                    navController.navigate("edit_subscription") // Navigate for adding new
+                    homeViewModel.clearSelectedSubscription()
+                    navController.navigate("edit_subscription")
                 },
                 navController = navController
+                // Asumo que HomeScreen y sus componentes internos (como el menú de ordenación) ya usan stringResources
             )
         }
         composable("edit_subscription") {
-            // EditSubscriptionScreen ahora toma el objeto Subscription? directamente
-            // y HomeViewModel.selectedSubscriptionForEdit es un Subscription?
             EditSubscriptionScreen(
                 subscriptionToEdit = homeViewModel.selectedSubscriptionForEdit,
                 onSaveSubscription = { updatedSubscription ->
-                    // Aquí decides si llamas a updateSubscription o addSubscription
-                    // basado en si updatedSubscription.id ya existe o es nuevo.
-                    // O podrías tener lógica separada en HomeViewModel para esto.
                     if (homeViewModel.subscriptions.value.any { it.id == updatedSubscription.id }) {
                         homeViewModel.updateSubscription(updatedSubscription)
                     } else {
@@ -150,39 +199,25 @@ fun AppNavigation(settingsManager: SettingsManager) { // settingsManager opciona
                     navController.popBackStack()
                 },
                 onNavigateBack = {
-                    Log.d("EditScreen", "onNavigateBack: Clearing selection and popping backstack")
+                    Log.d("EditScreen", "onNavigateBack: Clearing selection and popping backstack") // Log, puede quedar
                     homeViewModel.clearSelectedSubscription()
                     navController.popBackStack()
-                    Log.d("EditScreen", "onNavigateBack: PopBackStack called")
+                    Log.d("EditScreen", "onNavigateBack: PopBackStack called") // Log, puede quedar
                 }
+                // Asumo que EditSubscriptionScreen internamente usa stringResources para sus etiquetas y botones
             )
         }
-        composable("settings") { // Nueva ruta para la configuración
+        composable("settings") {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLogout = {
-                    // Aquí puedes limpiar cualquier estado de sesión si es necesario
-                    // (ej. limpiar tokens guardados)
                     navController.navigate("login") {
-                        popUpTo("home") { inclusive = true } // Limpia el backstack hasta home
-                        // O popUpTo(navController.graph.startDestinationId) { inclusive = true } para ir al inicio del grafo
+                        popUpTo("home") { inclusive = true }
                     }
                 }
+                // Asumo que SettingsScreen internamente usa stringResources
             )
         }
-    }
-}
-
-// The simple HomeScreen for previewing individual components might still be useful,
-// but the one used in navigation will now be the more complex one from ui.home.
-// You can keep this or remove it if not needed for isolated previews.
-@Composable
-fun SimplePreviewHomeScreen() { // Renamed to avoid conflict if you keep it
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        Text("Welcome to the Home Screen! (Simple Preview)")
     }
 }
 
@@ -191,14 +226,9 @@ fun SimplePreviewHomeScreen() { // Renamed to avoid conflict if you keep it
 @Composable
 fun DefaultPreview() {
     MobileAppProyectAndroidTheme {
-        // You can preview AppNavigation or a specific screen
-        val context = LocalContext.current
+        val context = LocalContext.current // No necesitas obtener el contexto aquí si no lo usas directamente
+        // Pasamos una nueva instancia para la preview, no tiene textos visibles directos aquí
         val previewSettingsManager = remember { SettingsManager(context.applicationContext) }
-
-        // Ahora pasamos la instancia de prueba a AppNavigation
         AppNavigation(settingsManager = previewSettingsManager)
-        // Or, to preview the detailed HomeScreen directly with its ViewModel:
-        // val homeViewModel: HomeViewModel = viewModel()
-        // HomeScreen(homeViewModel = homeViewModel)
     }
 }

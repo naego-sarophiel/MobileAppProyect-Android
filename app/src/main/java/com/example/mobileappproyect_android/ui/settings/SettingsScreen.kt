@@ -1,16 +1,15 @@
 package com.example.mobileappproyect_android.ui.settings
 
-import android.app.Activity
+// import android.app.Activity // NO SE USA AQUÍ para la lógica de idioma
+// import android.content.Context // NO SE USA AQUÍ para la lógica de idioma
 import android.content.Context
-import android.content.Intent
-import androidx.appcompat.app.AppCompatDelegate
-import androidx.compose.foundation.clickable
+import androidx.appcompat.app.AppCompatDelegate // Se usa en applyAppTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+// Corrected import for ArrowBack based on common Material Icons usage
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -18,22 +17,23 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalContext // Se usa para applyAppTheme
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.os.LocaleListCompat
+// import androidx.core.os.LocaleListCompat // NO SE USA DIRECTAMENTE AQUÍ
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.mobileappproyect_android.MainActivity // Necesitarás reiniciar esta
+import com.example.mobileappproyect_android.R
 import com.example.mobileappproyect_android.data.AppTheme
 import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.launch // Se usa para applyAppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
-    settingsViewModel: SettingsViewModel = viewModel(),
+    settingsViewModel: SettingsViewModel = viewModel(), // Correcto para AndroidViewModel
     onNavigateBack: () -> Unit,
     onLogout: () -> Unit
 ) {
@@ -41,29 +41,59 @@ fun SettingsScreen(
     val currentCurrency by settingsViewModel.currentCurrency.collectAsStateWithLifecycle()
     val currentLanguage by settingsViewModel.currentLanguage.collectAsStateWithLifecycle()
 
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val context = LocalContext.current // Necesario para applyAppTheme
+    val scope = rememberCoroutineScope() // Necesario para applyAppTheme
 
     // --- Para el selector de tema ---
     var themeDropdownExpanded by remember { mutableStateOf(false) }
     val themeOptions = AppTheme.values()
+    val lightThemeName = stringResource(R.string.settings_theme_light)
+    val darkThemeName = stringResource(R.string.settings_theme_dark)
+    val systemThemeName = stringResource(R.string.settings_theme_system)
+    val themeDisplayNames = remember(lightThemeName, darkThemeName, systemThemeName) {
+        themeOptions.map { theme ->
+            when (theme) {
+                AppTheme.LIGHT -> lightThemeName
+                AppTheme.DARK -> darkThemeName
+                AppTheme.SYSTEM -> systemThemeName
+            }
+        }
+    }
+    val currentThemeDisplayName = when (currentTheme) {
+        AppTheme.LIGHT -> lightThemeName
+        AppTheme.DARK -> darkThemeName
+        AppTheme.SYSTEM -> systemThemeName
+    }
 
     // --- Para el selector de moneda ---
     var currencyDropdownExpanded by remember { mutableStateOf(false) }
-    val currencyOptions = listOf("$", "€", "£", "¥", "₹") // Ejemplo de monedas
+    val currencyOptions = listOf("$", "€", "£", "¥", "₹") // Deberían ser recursos de string si necesitas localizarlos
 
     // --- Para el selector de idioma ---
     var languageDropdownExpanded by remember { mutableStateOf(false) }
-    val languageOptions = mapOf("en" to "English", "es" to "Español", "fr" to "Français") // Código -> Nombre legible
+    val englishLanguageName = stringResource(R.string.settings_language_english)
+    val spanishLanguageName = stringResource(R.string.settings_language_spanish)
+    val languageOptions = remember(englishLanguageName, spanishLanguageName) {
+        mapOf(
+            "en" to englishLanguageName,
+            "es" to spanishLanguageName
+            // Puedes añadir más idiomas aquí
+        )
+    }
+    val currentLanguageDisplayName = languageOptions[currentLanguage] ?: currentLanguage
 
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(
+                            // Assuming AutoMirrored is what you want for back arrow
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.settings_navigate_back_description)
+                        )
                     }
                 }
             )
@@ -75,22 +105,23 @@ fun SettingsScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            // Sección de Tema
-            SettingSectionTitle("Appearance")
+            SettingSectionTitle(stringResource(R.string.settings_section_appearance))
             SettingItemWithDropdown(
-                label = "Theme",
-                selectedValue = currentTheme.displayName,
+                label = stringResource(R.string.settings_theme_title),
+                selectedValue = currentThemeDisplayName,
                 expanded = themeDropdownExpanded,
                 onExpandedChange = { themeDropdownExpanded = it },
-                options = themeOptions.map { it.displayName },
-                onOptionSelected = { selectedThemeName ->
-                    val selectedTheme = themeOptions.find { it.displayName == selectedThemeName }
-                    selectedTheme?.let {
-                        settingsViewModel.setTheme(it)
-                        // Aplicar el tema inmediatamente (esto es un enfoque simplificado)
-                        // Un enfoque más robusto está en MainActivity observando el flow del tema.
-                        scope.launch {
-                            applyAppTheme(context, it) // Función helper
+                options = themeDisplayNames,
+                onOptionSelected = { selectedThemeDisplayName ->
+                    val selectedIndex = themeDisplayNames.indexOf(selectedThemeDisplayName)
+                    if (selectedIndex != -1) {
+                        val selectedTheme = themeOptions[selectedIndex]
+                        settingsViewModel.setTheme(selectedTheme)
+                        // La aplicación del tema visual (modo noche) generalmente se observa
+                        // en MainActivity o MainApplication para actualizar AppCompatDelegate.
+                        // Si applyAppTheme solo cambia el modo noche, está bien aquí por ahora.
+                        scope.launch { // Esto está bien si applyAppTheme es una suspend function o necesita un scope
+                            applyAppTheme(context, selectedTheme)
                         }
                     }
                     themeDropdownExpanded = false
@@ -99,10 +130,9 @@ fun SettingsScreen(
 
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-            // Sección de Moneda
-            SettingSectionTitle("Preferences")
+            SettingSectionTitle(stringResource(R.string.settings_section_preferences))
             SettingItemWithDropdown(
-                label = "Currency Symbol",
+                label = stringResource(R.string.settings_currency_title),
                 selectedValue = currentCurrency,
                 expanded = currencyDropdownExpanded,
                 onExpandedChange = { currencyDropdownExpanded = it },
@@ -110,80 +140,68 @@ fun SettingsScreen(
                 onOptionSelected = { selectedCurrency ->
                     settingsViewModel.setCurrency(selectedCurrency)
                     currencyDropdownExpanded = false
-                    // Nota: Necesitarás actualizar la UI donde se muestra la moneda para que refleje este cambio.
                 }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Sección de Idioma
             SettingItemWithDropdown(
-                label = "Language",
-                selectedValue = languageOptions[currentLanguage] ?: currentLanguage, // Muestra nombre legible
+                label = stringResource(R.string.settings_language_title),
+                selectedValue = currentLanguageDisplayName,
                 expanded = languageDropdownExpanded,
                 onExpandedChange = { languageDropdownExpanded = it },
-                options = languageOptions.values.toList(),
-                onOptionSelected = { selectedLanguageName ->
-                    val selectedLangCode = languageOptions.entries.find { it.value == selectedLanguageName }?.key
-                    selectedLangCode?.let {
-                        settingsViewModel.setLanguage(it)
-                        // IMPORTANTE: El cambio de idioma requiere reiniciar la Activity
-                        applyAppLanguage(context, it) // Función helper para aplicar y reiniciar
+                options = languageOptions.values.toList(), // Muestra los nombres de los idiomas
+                onOptionSelected = { selectedLanguageDisplayName -> // El usuario selecciona el nombre del idioma
+                    // Encuentra el código del idioma basado en el nombre seleccionado
+                    val selectedLangCode = languageOptions.entries.find { it.value == selectedLanguageDisplayName }?.key
+                    selectedLangCode?.let { code ->
+                        // Llama a la función del ViewModel que ahora maneja todo
+                        settingsViewModel.setLanguage(code)
                     }
                     languageDropdownExpanded = false
                 }
             )
 
-
             Divider(modifier = Modifier.padding(vertical = 16.dp))
 
-            // Sección de Cuenta
-            SettingSectionTitle("Account")
+            SettingSectionTitle(stringResource(R.string.settings_section_account))
             Button(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
             ) {
-                Icon(Icons.Filled.ExitToApp, contentDescription = "Logout Icon", modifier = Modifier.padding(end = 8.dp))
-                Text("Logout")
+                Icon(
+                    Icons.Filled.ExitToApp,
+                    contentDescription = stringResource(R.string.settings_logout_icon_description),
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(stringResource(R.string.settings_logout_button))
             }
         }
     }
 }
 
-// Función helper para aplicar el tema (simplificado para Compose puro)
-// La aplicación de tema a nivel de sistema es más compleja y se hace en MainActivity
+// Esta función aplica el tema (modo noche). Puede quedarse aquí o moverse
+// si la lógica de aplicar tema se centraliza más (ej. observando el flow en MainActivity).
 fun applyAppTheme(context: Context, theme: AppTheme) {
     val mode = when (theme) {
         AppTheme.LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
         AppTheme.DARK -> AppCompatDelegate.MODE_NIGHT_YES
         AppTheme.SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
     }
-    AppCompatDelegate.setDefaultNightMode(mode) // Esto afecta a las Activities basadas en AppCompat
-    // Para Compose puro, el tema se aplica en el Composable raíz (MainActivity)
-    // basado en la preferencia guardada.
+    AppCompatDelegate.setDefaultNightMode(mode)
 }
 
-
+// ESTA FUNCIÓN YA NO ES NECESARIA AQUÍ, SU LÓGICA ESTÁ EN SettingsViewModel
+/*
 fun applyAppLanguage(context: Context, languageCode: String) {
     val appLocale: LocaleListCompat = LocaleListCompat.forLanguageTags(languageCode)
     AppCompatDelegate.setApplicationLocales(appLocale)
-
-    // Para forzar la recreación de la Activity inmediatamente:
-    // Esto asegura que los nuevos recursos de idioma se carguen.
     if (context is Activity) {
-        context.recreate() // Llama a recreate() en la Activity actual
+        context.recreate()
     }
-    // Alternativamente, si quieres reiniciar la app completamente:
-    // val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-    // intent?.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
-    // context.startActivity(intent)
-    // if (context is Activity) {
-    //     context.finishAffinity() // Cierra todas las activities de la app
-    // }
-    // System.exit(0) // No recomendado, pero es una forma drástica
 }
-
+*/
 
 @Composable
 fun SettingSectionTitle(title: String) {
@@ -224,7 +242,7 @@ fun SettingItemWithDropdown(
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                 modifier = Modifier
                     .menuAnchor()
-                    .width(150.dp) // Ajusta el ancho según sea necesario
+                    .width(150.dp)
             )
             ExposedDropdownMenu(
                 expanded = expanded,
@@ -243,11 +261,11 @@ fun SettingItemWithDropdown(
     }
 }
 
-
 @Preview(showBackground = true, name = "Settings Screen Light")
 @Composable
 fun SettingsScreenPreview() {
     MobileAppProyectAndroidTheme {
+        // Para la preview, SettingsViewModel se instanciará con el contexto de la preview
         SettingsScreen(onNavigateBack = {}, onLogout = {})
     }
 }

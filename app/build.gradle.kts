@@ -65,6 +65,9 @@ dependencies {
     implementation(libs.coil.compose)
     implementation(libs.androidx.datastore.preferences) // O la última versión
     implementation(libs.androidx.lifecycle.runtime.ktx.v291)
+    implementation(libs.kotlinx.coroutines.core) // O la última versión estable
+    // Si también usas corrutinas específicas de Android (como para viewModelScope, lifecycleScope):
+    implementation(libs.kotlinx.coroutines.android)
 
     // Accompanist Permissions (Add this line)
     implementation(libs.accompanist.permissions)

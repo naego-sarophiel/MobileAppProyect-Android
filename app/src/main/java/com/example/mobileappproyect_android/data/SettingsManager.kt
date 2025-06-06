@@ -25,6 +25,7 @@ class SettingsManager(context: Context) {
     // --- Theme ---
     val uiThemeFlow: Flow<AppTheme> = appContext.dataStore.data
         .map { preferences ->
+            // AppTheme.fromKey ya no necesita displayName
             AppTheme.fromKey(preferences[UI_THEME_KEY] ?: AppTheme.SYSTEM.key)
         }
 
@@ -37,7 +38,7 @@ class SettingsManager(context: Context) {
     // --- Currency ---
     val currencyFlow: Flow<String> = appContext.dataStore.data
         .map { preferences ->
-            preferences[CURRENCY_KEY] ?: "$" // Default currency
+            preferences[CURRENCY_KEY] ?: "€" // Default currency
         }
 
     suspend fun setCurrency(currencySymbol: String) {
@@ -49,7 +50,7 @@ class SettingsManager(context: Context) {
     // --- Language ---
     val languageFlow: Flow<String> = appContext.dataStore.data
         .map { preferences ->
-            preferences[LANGUAGE_KEY] ?: "en" // Default language (English)
+            preferences[LANGUAGE_KEY] ?: "en" // Default language (Spanish, cambiar a "en" si prefieres inglés por defecto)
         }
 
     suspend fun setLanguage(languageCode: String) {
@@ -59,11 +60,11 @@ class SettingsManager(context: Context) {
     }
 }
 
-// Enum para representar las opciones de tema
-enum class AppTheme(val key: String, val displayName: String) {
-    LIGHT("light", "Light"),
-    DARK("dark", "Dark"),
-    SYSTEM("system", "System Default");
+// Enum para representar las opciones de tema (solo con 'key')
+enum class AppTheme(val key: String) { // <--- ELIMINADO displayName de aquí
+    LIGHT("light"),
+    DARK("dark"),
+    SYSTEM("system");
 
     companion object {
         fun fromKey(key: String): AppTheme {
