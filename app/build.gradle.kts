@@ -3,6 +3,7 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -43,46 +44,58 @@ android {
 
 dependencies {
 
+    // AndroidX Core & Lifecycle
     implementation(libs.androidx.core.ktx)
-    implementation(libs.androidx.lifecycle.runtime.ktx)
-    implementation(libs.androidx.lifecycle.viewmodel.compose)
+    implementation(libs.androidx.lifecycle.runtime.ktx.v291)
+    implementation(libs.androidx.lifecycle.viewmodel.compose.v291)
     implementation(libs.androidx.activity.compose)
+
+    // Jetpack Compose
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
-    implementation(libs.coil.compose)
-    implementation(libs.androidx.core.ktx.v1120)
-    implementation(libs.androidx.lifecycle.runtime.ktx.v262)
-    implementation(libs.androidx.activity.compose.v1101)
-    implementation(platform(libs.androidx.compose.bom.v20230800))
-    implementation(libs.ui)
-    implementation(libs.ui.graphics)
-    implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
-    implementation(libs.androidx.lifecycle.viewmodel.compose.v291)
+
+    // Navigation
     implementation(libs.androidx.navigation.compose)
+    // implementation(libs.androidx.navigation.compose.android) // Consider if needed
+
+    // Image Loading
     implementation(libs.coil.compose)
-    implementation(libs.androidx.datastore.preferences) // O la última versión
-    implementation(libs.androidx.lifecycle.runtime.ktx.v291)
-    implementation(libs.kotlinx.coroutines.core) // O la última versión estable
-    // Si también usas corrutinas específicas de Android (como para viewModelScope, lifecycleScope):
+
+    // DataStore
+    implementation(libs.androidx.datastore.preferences)
+
+    // Coroutines
+    implementation(libs.kotlinx.coroutines.core)
     implementation(libs.kotlinx.coroutines.android)
 
-    // Accompanist Permissions (Add this line)
+    // Room Persistence Library
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    implementation(libs.androidx.room.ktx)
+    testImplementation(libs.androidx.room.testing)
+
+    // Accompanist Permissions
     implementation(libs.accompanist.permissions)
-    implementation(libs.androidx.material3)
-    implementation(libs.androidx.material.icons.core) // Or latest
-    implementation(libs.androidx.material.icons.extended) // Or latest
+
+    // Material Icons
+    implementation(libs.androidx.material.icons.core)
+    implementation(libs.androidx.material.icons.extended)
+
+    // Other Libraries
     implementation(libs.generativeai)
-    implementation(libs.androidx.navigation.compose.android)
-    implementation(libs.lifecycle.viewmodel.compose)
     implementation(libs.androidx.appcompat)
+
+    // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.ui.test.junit4)
+
+    // Debugging
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }

@@ -1,8 +1,6 @@
 package com.example.mobileappproyect_android.ui.home
 
 // Mantén tus importaciones actuales, solo asegúrate de estas:
-import androidx.activity.result.launch
-import androidx.compose.animation.core.copy
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -11,33 +9,34 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.items // Asegúrate que esta está
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Sort
-import androidx.compose.runtime.collectAsState // Opcional si usas collectAsStateWithLifecycle
-import androidx.lifecycle.compose.collectAsStateWithLifecycle // Recomendado
-import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
+import androidx.compose.material3.AlertDialog // NECESARIO PARA EL DIÁLOGO
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button // NECESARIO PARA EL DIÁLOGO
+import androidx.compose.material3.ButtonDefaults // NECESARIO PARA EL DIÁLOGO
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 // ... el resto de tus importaciones ...
-import androidx.compose.material3.Card // Asegúrate de tener esta para SubscriptionItem
-import androidx.compose.material3.CardDefaults // Para la elevación de la Card
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -64,41 +63,40 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.isEmpty
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.error
-import androidx.compose.ui.text.font.FontWeight // Para el texto en SubscriptionItem
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.substring
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import coil.request.ImageRequest
 import coil.compose.AsyncImage
 import com.example.mobileappproyect_android.R
-import com.example.mobileappproyect_android.data.Subscription
+// Import SubscriptionUiModel and remove/comment out old Subscription import if it was here
+import com.example.mobileappproyect_android.ui.home.SubscriptionUiModel // <-- IMPORT THIS
+// import com.example.mobileappproyect_android.data.Subscription // <-- REMOVE OR COMMENT OUT if previously used for SubscriptionItem
 import com.example.mobileappproyect_android.data.SubscriptionStatus
-import com.example.mobileappproyect_android.data.localizedName
+import com.example.mobileappproyect_android.data.localizedName // Asegúrate que está importado
+import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
 import kotlinx.coroutines.launch
-import kotlin.text.isNotEmpty
-import kotlin.text.lowercase
-import kotlin.text.replace
-import kotlin.text.substring
-import kotlin.text.uppercase
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter // Para formatear fecha
+import java.time.format.FormatStyle     // Para formatear fecha
+import java.util.Locale                 // Para formatear costo
 
 
 // Data class for Navigation Drawer Items
 data class NavItem(
-    // Ya no almacenamos el string literal aquí si lo vamos a resolver en el Composable
-    // En su lugar, podríamos tener un ID de recurso o un identificador para buscar el string.
-    // Pero para simplificar y dado que se usa directamente en el @Composable HomeScreen,
-    // podemos resolver los strings al crear la lista `navItems`.
-    val label: String, // Este será el string ya resuelto
+    val label: String,
     val icon: ImageVector,
     val route: String
 )
@@ -107,21 +105,22 @@ data class NavItem(
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
-    onSubscriptionClick: (String) -> Unit,
+    onSubscriptionClick: (String) -> Unit, // Para editar/ver detalles
     onAddSubscriptionClick: () -> Unit,
     navController: NavController
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    // subscriptionsList is now List<SubscriptionUiModel>
     val subscriptionsList by homeViewModel.subscriptions.collectAsStateWithLifecycle()
     val currentSortCriteria by homeViewModel.sortCriteria.collectAsStateWithLifecycle()
+    val monthlyTotal by homeViewModel.monthlyTotalSpend.collectAsStateWithLifecycle()
 
-    // Resuelve los strings para NavItem aquí, ya que estamos en un @Composable
     val homeLabel = stringResource(R.string.home_nav_item_home)
     val addSubscriptionLabel = stringResource(R.string.home_nav_item_add_subscription)
     val settingsLabel = stringResource(R.string.home_nav_item_settings)
 
-    val navItems = remember(homeLabel, addSubscriptionLabel, settingsLabel) { // Re-calcula si los strings cambian
+    val navItems = remember(homeLabel, addSubscriptionLabel, settingsLabel) {
         listOf(
             NavItem(homeLabel, Icons.Filled.Home, "home_screen"),
             NavItem(addSubscriptionLabel, Icons.Filled.AddCircle, "add_subscription"),
@@ -132,7 +131,6 @@ fun HomeScreen(
     var selectedItemIndex by remember { mutableStateOf(0) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
-    // Resuelve los strings para sortOptions aquí
     val sortByRenewalLabel = stringResource(R.string.sort_by_renewal_soonest)
     val sortByPriceLowHighLabel = stringResource(R.string.sort_by_price_low_high)
     val sortByPriceHighLowLabel = stringResource(R.string.sort_by_price_high_low)
@@ -147,20 +145,23 @@ fun HomeScreen(
         )
     }
 
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var subscriptionIdToDelete by remember { mutableStateOf<String?>(null) }
+
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
             ModalDrawerSheet {
                 Spacer(Modifier.height(16.dp))
                 Text(
-                    stringResource(R.string.home_drawer_title_menu), // "Menu"
+                    stringResource(R.string.home_drawer_title_menu),
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.padding(horizontal = 16.dp)
                 )
                 Spacer(Modifier.height(16.dp))
                 navItems.forEachIndexed { index, item ->
                     NavigationDrawerItem(
-                        label = { Text(item.label) }, // item.label ya es el string resuelto
+                        label = { Text(item.label) },
                         selected = index == selectedItemIndex,
                         onClick = {
                             selectedItemIndex = index
@@ -171,7 +172,6 @@ fun HomeScreen(
                                 onAddSubscriptionClick()
                             }
                         },
-                        // La contentDescription debería ser única y descriptiva
                         icon = { Icon(item.icon, contentDescription = item.label) },
                         modifier = Modifier.padding(NavigationDrawerItemDefaults.ItemPadding)
                     )
@@ -182,7 +182,7 @@ fun HomeScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(stringResource(R.string.home_title)) }, // "My Subscriptions"
+                    title = { Text(stringResource(R.string.home_title)) },
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch {
@@ -191,7 +191,7 @@ fun HomeScreen(
                         }) {
                             Icon(
                                 Icons.Filled.Menu,
-                                contentDescription = stringResource(R.string.home_drawer_open_description) // "Open Drawer"
+                                contentDescription = stringResource(R.string.home_drawer_open_description)
                             )
                         }
                     },
@@ -206,16 +206,15 @@ fun HomeScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Sort,
-                                    contentDescription = stringResource(R.string.home_sort_subscriptions_description) // "Sort Subscriptions"
+                                    contentDescription = stringResource(R.string.home_sort_subscriptions_description)
                                 )
                             }
-
                             ExposedDropdownMenu(
                                 expanded = sortMenuExpanded,
                                 onDismissRequest = { sortMenuExpanded = false },
-                                modifier = Modifier.width(220.dp) // O un ancho más dinámico
+                                modifier = Modifier.width(220.dp)
                             ) {
-                                sortOptions.forEach { (criteria, label) -> // label ya es el string resuelto
+                                sortOptions.forEach { (criteria, label) ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
@@ -232,7 +231,7 @@ fun HomeScreen(
                                             {
                                                 Icon(
                                                     Icons.Filled.Check,
-                                                    contentDescription = stringResource(R.string.home_sort_selected_description) // "Selected sort criteria"
+                                                    contentDescription = stringResource(R.string.home_sort_selected_description)
                                                 )
                                             }
                                         } else null,
@@ -252,8 +251,29 @@ fun HomeScreen(
                 FloatingActionButton(onClick = onAddSubscriptionClick) {
                     Icon(
                         Icons.Filled.Add,
-                        contentDescription = stringResource(R.string.home_fab_add_subscription_description) // "Add Subscription"
+                        contentDescription = stringResource(R.string.home_fab_add_subscription_description)
                     )
+                }
+            },
+            bottomBar = {
+                if (subscriptionsList.isNotEmpty()) {
+                    BottomAppBar(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "${stringResource(R.string.home_monthly_total_label)}: $monthlyTotal",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontSize = 18.sp
+                            )
+                        }
+                    }
                 }
             }
         ) { paddingValues ->
@@ -265,25 +285,61 @@ fun HomeScreen(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(stringResource(R.string.home_no_subscriptions)) // "No subscriptions added yet..."
+                    Text(stringResource(R.string.home_no_subscriptions))
                 }
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues),
-                    contentPadding = PaddingValues(vertical = 8.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 72.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(subscriptionsList, key = { it.id }) { subscription ->
-                        val isSoon = homeViewModel.isRenewalSoon(subscription.renewalDate)
+                    // items now receives List<SubscriptionUiModel>
+                    items(subscriptionsList, key = { it.id }) { subscriptionUiModel ->
+                        val isSoon = homeViewModel.isRenewalSoon(subscriptionUiModel.renewalDate)
                         SubscriptionItem(
-                            subscription = subscription,
+                            subscription = subscriptionUiModel, // Pass SubscriptionUiModel
                             isRenewalSoon = isSoon,
-                            onClick = { onSubscriptionClick(subscription.id) }
+                            onClick = { onSubscriptionClick(subscriptionUiModel.id) },
+                            onDeleteClick = { subId ->
+                                subscriptionIdToDelete = subId
+                                showDeleteDialog = true
+                            }
                         )
                     }
                 }
+            }
+
+            if (showDeleteDialog && subscriptionIdToDelete != null) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showDeleteDialog = false
+                        subscriptionIdToDelete = null
+                    },
+                    title = { Text(stringResource(R.string.delete_subscription_dialog_title)) },
+                    text = { Text(stringResource(R.string.delete_subscription_dialog_message)) },
+                    confirmButton = {
+                        Button(
+                            onClick = {
+                                subscriptionIdToDelete?.let { homeViewModel.deleteSubscription(it) }
+                                showDeleteDialog = false
+                                subscriptionIdToDelete = null
+                            },
+                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                        ) {
+                            Text(stringResource(R.string.delete_action))
+                        }
+                    },
+                    dismissButton = {
+                        Button(onClick = {
+                            showDeleteDialog = false
+                            subscriptionIdToDelete = null
+                        }) {
+                            Text(stringResource(R.string.cancel_action))
+                        }
+                    }
+                )
             }
         }
     }
@@ -292,71 +348,172 @@ fun HomeScreen(
 
 @Composable
 fun SubscriptionItem(
-    subscription: Subscription,
+    subscription: SubscriptionUiModel,
     isRenewalSoon: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onDeleteClick: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     ) {
         Row(
             modifier = Modifier
-                .padding(16.dp)
+                .padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 8.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             AsyncImage(
-                model = subscription.imageUrl,
-                // Content description más específico para la imagen
-                contentDescription = stringResource(R.string.subscription_item_logo_description, subscription.name),
+                // Use Coil's ImageRequest.Builder
+                model = ImageRequest.Builder(LocalContext.current) // <--- Use coil.request.ImageRequest
+                    .data(subscription.imageUrl)
+                    .crossfade(true)
+                    .placeholder(R.drawable.ic_placeholder_image) // Make sure R.drawable.ic_placeholder_image exists
+                    .error(R.drawable.ic_placeholder_image)
+                    .build(), // This .build() is a method of coil.request.ImageRequest.Builder
+                contentDescription = stringResource(R.string.subscription_item_logo_description, subscription.name), // Make sure R.string.subscription_item_logo_description exists
                 modifier = Modifier
                     .size(56.dp)
                     .clip(CircleShape),
-                contentScale = ContentScale.Crop,
-                placeholder = painterResource(id = R.drawable.ic_placeholder_image), // Asumo que esto no cambia con el idioma
-                error = painterResource(id = R.drawable.ic_placeholder_image) // Asumo que esto no cambia con el idioma
+                contentScale = ContentScale.Crop
             )
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = subscription.name, // El nombre viene de los datos, no de strings.xml
+                    text = subscription.name,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
+                val formattedRenewalDate = subscription.renewalDate.format(DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM))
                 Text(
-                    // Usar stringResource para el prefijo "Renews: "
-                    text = stringResource(R.string.subscription_item_renews_prefix) + " ${subscription.renewalDate}",
+                    text = "${stringResource(R.string.subscription_item_renews_prefix)} $formattedRenewalDate",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (isRenewalSoon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "${subscription.currencySymbol}${String.format(Locale.getDefault(), "%.2f", subscription.cost)}",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = if (isRenewalSoon) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant
+                    fontWeight = FontWeight.SemiBold
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = subscription.status.localizedName(),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, // Color del texto del estado
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier
                         .background(
-                            // El color del fondo del estado depende de la lógica, no de strings.xml
+                            // Assuming statusColor is defined elsewhere and takes SubscriptionStatus
                             color = statusColor(subscription.status).copy(alpha = 0.1f),
                             shape = RoundedCornerShape(4.dp)
                         )
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                // El símbolo de moneda y el costo vienen de los datos
-                text = "${subscription.currencySymbol}${String.format("%.2f", subscription.cost)}",
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
+
+            IconButton(
+                onClick = { onDeleteClick(subscription.id) }
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = stringResource(R.string.subscription_item_delete_description),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
         }
     }
 }
 
+@Composable
+fun statusColor(status: SubscriptionStatus): Color {
+    return when (status) {
+        SubscriptionStatus.ACTIVE -> Color.Green
+        SubscriptionStatus.PAUSED -> Color.Gray
+        SubscriptionStatus.CANCELED -> MaterialTheme.colorScheme.error
+        SubscriptionStatus.PENDING_PAYMENT -> Color(0xFFFFA500) // Orange
+    }
+}
+
+@Preview(showBackground = true, name = "HomeScreen Light")
+@Composable
+fun HomeScreenPreview() {
+    MobileAppProyectAndroidTheme(darkTheme = false) {
+        HomeScreen(
+            onSubscriptionClick = {},
+            onAddSubscriptionClick = {},
+            navController = rememberNavController()
+            // HomeViewModel will provide an empty list or sample SubscriptionUiModels for preview
+        )
+    }
+}
+
+@Preview(showBackground = true, uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES, name = "HomeScreen Dark")
+@Composable
+fun HomeScreenDarkPreview() {
+    MobileAppProyectAndroidTheme(darkTheme = true) {
+        HomeScreen(
+            onSubscriptionClick = {},
+            onAddSubscriptionClick = {},
+            navController = rememberNavController()
+            // HomeViewModel will provide an empty list or sample SubscriptionUiModels for preview
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "SubscriptionItem Renewal Soon")
+@Composable
+fun SubscriptionItemPreviewRenewalSoon() {
+    MobileAppProyectAndroidTheme {
+        SubscriptionItem(
+            // CHANGED to SubscriptionUiModel
+            subscription = SubscriptionUiModel(
+                id = "1",
+                name = "Netflix Premium",
+                imageUrl = null,
+                renewalDate = LocalDate.now().plusDays(3),
+                baseCost = 15.99,       // Base cost from entity
+                baseCurrency = "USD",   // Base currency from entity
+                cost = 15.99,           // Calculated/display cost
+                currencySymbol = "$",   // Display currency symbol
+                status = SubscriptionStatus.ACTIVE
+            ),
+            isRenewalSoon = true,
+            onClick = {},
+            onDeleteClick = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, name = "SubscriptionItem Normal")
+@Composable
+fun SubscriptionItemPreviewNormal() {
+    MobileAppProyectAndroidTheme {
+        SubscriptionItem(
+            // CHANGED to SubscriptionUiModel
+            subscription = SubscriptionUiModel(
+                id = "2",
+                name = "Spotify Family",
+                imageUrl = null,
+                renewalDate = LocalDate.now().plusMonths(1),
+                baseCost = 14.99,
+                baseCurrency = "USD",
+                cost = 14.99,
+                currencySymbol = "$",
+                status = SubscriptionStatus.ACTIVE
+            ),
+            isRenewalSoon = false,
+            onClick = {},
+            onDeleteClick = {}
+        )
+    }
+}

@@ -72,5 +72,12 @@
     <string name="edit_subscription_label_renewal_date">Fecha de Renovación</string>
     <string name="edit_subscription_calendar_icon_description">Icono de Calendario</string>
     <string name="edit_subscription_label_status">Estado</string>
+    <string name="home_monthly_total_label">Total Mensual:</string>
+    <string name="subscription_item_delete_description">Borrar</string>
+    <string name="delete_subscription_dialog_title">Borrar Suscripcion</string>
+    <string name="delete_subscription_dialog_message">Estas seguro de que quieres borrar la suscripcion?</string>
+    <string name="delete_action">Borrar</string>
+    <string name="cancel_action">Cancelar</string>
+    <string name="edit_subscription_error_saving_image">Error while saving the image</string>
     <!-- Añade todas las strings que usas en tu UI -->
 </resources>
