@@ -2,6 +2,7 @@ package com.example.mobileappproyect_android.ui.settings
 
 // import android.app.Activity // NO SE USA AQUÍ para la lógica de idioma
 // import android.content.Context // NO SE USA AQUÍ para la lógica de idioma
+import android.app.Application
 import android.content.Context
 import androidx.appcompat.app.AppCompatDelegate // Se usa en applyAppTheme
 import androidx.compose.foundation.layout.*
@@ -25,14 +26,18 @@ import androidx.compose.ui.unit.dp
 // import androidx.core.os.LocaleListCompat // NO SE USA DIRECTAMENTE AQUÍ
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
 import com.example.mobileappproyect_android.R
 import com.example.mobileappproyect_android.data.AppTheme
+import com.example.mobileappproyect_android.data.SessionManager
+import com.example.mobileappproyect_android.data.SettingsManager
 import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
 import kotlinx.coroutines.launch // Se usa para applyAppTheme
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    navController: NavController, // Para navegación
     settingsViewModel: SettingsViewModel = viewModel(), // Correcto para AndroidViewModel
     onNavigateBack: () -> Unit,
     onLogout: () -> Unit
@@ -265,7 +270,68 @@ fun SettingItemWithDropdown(
 @Composable
 fun SettingsScreenPreview() {
     MobileAppProyectAndroidTheme {
-        // Para la preview, SettingsViewModel se instanciará con el contexto de la preview
-        SettingsScreen(onNavigateBack = {}, onLogout = {})
+        // Create a NavController instance for the preview
+        val previewNavController = NavController(LocalContext.current)
+
+        // It's also good practice to provide a preview version of your ViewModel
+        // if its initialization is complex or requires specific dependencies.
+        // For SettingsViewModel, since it's an AndroidViewModel,
+        // it needs an Application instance.
+        val application = LocalContext.current.applicationContext as Application
+        val previewSettingsManager = SettingsManager(application) // If SettingsManager is simple
+        val previewSessionManager = SessionManager(application)   // If SessionManager is simple
+
+        // If SettingsViewModel has a default constructor or its factory can be easily used:
+        // val previewViewModel: SettingsViewModel = viewModel() // This might work if defaults are okay
+
+        // Or, more explicitly for preview if factory is needed:
+        // val previewViewModel: SettingsViewModel = viewModel(
+        //    factory = SettingsViewModel.provideFactory(
+        //        application,
+        //        previewSettingsManager,
+        //        previewSessionManager
+        //    )
+        // )
+        // For simplicity, if the default viewModel() works or you have a simpler preview setup:
+
+        SettingsScreen(
+            navController = previewNavController, // <<< PASS THE PREVIEW NAVCONTROLLER
+            // settingsViewModel = previewViewModel, // Pass a preview ViewModel if needed
+            onNavigateBack = {},
+            onLogout = {}
+        )
+    }
+}
+
+// Optional: If your SettingsViewModel is complex to set up for previews,
+// you might create a simpler fake/dummy version or a helper function.
+// For instance, if SettingsViewModel doesn't rely heavily on complex constructor
+// parameters for its basic preview state, the default `viewModel()` might suffice in preview.
+// However, SettingsViewModel requires Application, SettingsManager, and SessionManager through its factory.
+
+// A more robust preview providing the ViewModel explicitly:
+@Preview(showBackground = true, name = "Settings Screen Dark", uiMode = android.content.res.Configuration.UI_MODE_NIGHT_YES)
+@Composable
+fun SettingsScreenDarkPreview() {
+    MobileAppProyectAndroidTheme(darkTheme = true) {
+        val context = LocalContext.current
+        val application = context.applicationContext as Application
+        val previewNavController = NavController(context)
+        val previewSettingsManager = SettingsManager(application)
+        val previewSessionManager = SessionManager(application)
+
+        // Instantiate SettingsViewModel using its factory for the preview
+        val previewSettingsViewModel = SettingsViewModel(
+            application = application,
+            settingsManager = previewSettingsManager,
+            sessionManager = previewSessionManager
+        ) // Assuming its factory is simple or using direct instantiation for preview if appropriate
+
+        SettingsScreen(
+            navController = previewNavController,
+            settingsViewModel = previewSettingsViewModel,
+            onNavigateBack = {},
+            onLogout = {}
+        )
     }
 }

@@ -13,7 +13,7 @@
     <string name="renewal_date">Renewal Date</string>
     <string name="status">Status</string>
     <string name="login_title_screen">Log In</string>
-    <string name="login_username_label">Username</string>
+    <string name="login_username_label">Email</string>
     <string name="login_password_label">Password</string>
     <string name="login_password_hide_description">Press here to hide the password</string>
     <string name="login_password_show_description">Press here to show the password</string>
@@ -74,5 +74,6 @@
     <string name="delete_action">Delete</string>
     <string name="cancel_action">Cancel</string>
     <string name="edit_subscription_error_saving_image">Error while saving the image</string>
+    <string name="login_remember_me_checkbox">Remember me</string>
     <!-- Añade todas las strings que usas en tu UI -->
 </resources>

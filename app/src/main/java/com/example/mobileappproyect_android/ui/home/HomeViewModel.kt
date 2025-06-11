@@ -10,9 +10,6 @@ import com.example.mobileappproyect_android.data.ExchangeRateManager
 import com.example.mobileappproyect_android.data.SettingsManager
 // Import your new SubscriptionEntity and SubscriptionUiModel
 import com.example.mobileappproyect_android.data.SubscriptionEntity // For DAO interactions
-import com.example.mobileappproyect_android.ui.home.SubscriptionUiModel // For UI and ViewModel state
-import com.example.mobileappproyect_android.ui.home.toEntity // Mapper
-import com.example.mobileappproyect_android.ui.home.toUiModel // Mapper
 import com.example.mobileappproyect_android.data.SubscriptionDao
 import com.example.mobileappproyect_android.data.SubscriptionStatus
 import kotlinx.coroutines.flow.*
@@ -25,9 +22,7 @@ import java.util.Locale
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import kotlin.text.firstOrNull
 import kotlin.text.lowercase
-import kotlin.text.sumOf
 
 enum class SortCriteria {
     RENEWAL_DATE_ASC,
@@ -36,7 +31,7 @@ enum class SortCriteria {
     NAME_ASC
 }
 
-class HomeViewModel(application: Application) : AndroidViewModel(application) {
+open class HomeViewModel(application: Application) : AndroidViewModel(application) {
 
     private val settingsManager = SettingsManager(application)
     private val exchangeRateManager = ExchangeRateManager()
@@ -166,6 +161,14 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    open suspend fun getSubscriptionById(id: String): SubscriptionUiModel? {
+        // This depends on how you store/access your subscriptions.
+        // If they are in a Flow<List<SubscriptionUiModel>>, you might do:
+        return subscriptions.first().find { it.id == id }
+        // Or if you fetch from a repository:
+        // return repository.getSubscriptionById(id)
+    }
+
     // Extension function for SubscriptionUiModel
     private fun SubscriptionUiModel.isActiveNow(): Boolean {
         return this.status == SubscriptionStatus.ACTIVE
@@ -219,8 +222,8 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // This method now takes and sets SubscriptionUiModel
-    fun onSubscriptionSelectedForEdit(subscriptionUiModel: SubscriptionUiModel?) {
-        selectedSubscriptionForEdit = subscriptionUiModel?.copy() // copy() on UiModel is fine
+    fun onSubscriptionSelectedForEdit(subscription: SubscriptionUiModel?) { // Changed parameter type
+        selectedSubscriptionForEdit = subscription?.copy() // Now 'subscription' is the correct type
     }
 
     fun clearSelectedSubscription() {
@@ -228,7 +231,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Takes SubscriptionUiModel from the UI (e.g., an edit screen)
-    fun updateSubscription(updatedSubscriptionUiModel: SubscriptionUiModel) {
+    open fun updateSubscription(updatedSubscriptionUiModel: SubscriptionUiModel) {
         viewModelScope.launch {
             val entityToUpdate = updatedSubscriptionUiModel.toEntity() // Convert to entity before saving
             subscriptionDao.updateSubscription(entityToUpdate)
@@ -237,7 +240,7 @@ class HomeViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     // Takes SubscriptionUiModel from the UI (e.g., an add screen)
-    fun addSubscription(newSubscriptionUiModel: SubscriptionUiModel) {
+    open fun addSubscription(newSubscriptionUiModel: SubscriptionUiModel) {
         viewModelScope.launch {
             // Generate a unique ID if it's a new subscription and ID is blank
             val uiModelWithId = if (newSubscriptionUiModel.id.isBlank()) {

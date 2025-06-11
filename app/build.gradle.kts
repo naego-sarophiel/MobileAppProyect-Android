@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.google.android.libraries.mapsplatform.secrets.gradle.plugin)
     id("com.google.devtools.ksp")
+    id("kotlinx-serialization")
 }
 
 android {
@@ -43,6 +44,18 @@ android {
 }
 
 dependencies {
+
+    implementation(libs.ktor.client.core) // Check for the latest Ktor version
+    implementation(libs.ktor.client.android) // For Android-specific engine
+    implementation(libs.ktor.client.content.negotiation)
+    implementation(libs.ktor.serialization.kotlinx.json)
+
+    // Kotlinx Serialization (if not already included by Ktor or another dependency)
+    implementation(libs.kotlinx.serialization.json) // Check latest
+
+    // For saving "Remember Me" preference (DataStore)
+    implementation(libs.androidx.datastore.preferences)
+    implementation(libs.ktor.client.logging)
 
     // AndroidX Core & Lifecycle
     implementation(libs.androidx.core.ktx)

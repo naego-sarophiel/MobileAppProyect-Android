@@ -14,7 +14,7 @@
     <string name="status">Estado</string>
 
     <string name="login_title_screen">Iniciar Sesión</string>
-    <string name="login_username_label">Usuario</string>
+    <string name="login_username_label">Correo Electrónico</string>
     <string name="login_password_label">Contraseña</string>
     <string name="login_password_hide_description">Pulsar aquí para ocultar la contraseña</string>
     <string name="login_password_show_description">Pulsar aquí para mostrar la contraseña</string>
@@ -78,6 +78,7 @@
     <string name="delete_subscription_dialog_message">Estas seguro de que quieres borrar la suscripcion?</string>
     <string name="delete_action">Borrar</string>
     <string name="cancel_action">Cancelar</string>
-    <string name="edit_subscription_error_saving_image">Error while saving the image</string>
+    <string name="edit_subscription_error_saving_image">Error al guardar la imagen</string>
+    <string name="login_remember_me_checkbox">Recuerdame</string>
     <!-- Añade todas las strings que usas en tu UI -->
 </resources>

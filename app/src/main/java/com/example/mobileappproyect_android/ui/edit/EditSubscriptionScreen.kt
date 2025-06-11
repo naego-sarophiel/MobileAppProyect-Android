@@ -1,11 +1,12 @@
 package com.example.mobileappproyect_android.ui.edit
 
 import android.Manifest
+import android.app.Application
 import android.app.DatePickerDialog
-import android.content.Context
+// import android.content.Context // No longer needed directly for copyUriToInternalStorage
 import android.net.Uri
 import android.os.Build
-import android.util.Log
+// import android.util.Log // Logging is now in ViewModel
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,9 +23,12 @@ import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.runtime.* // Keep this for remember, LaunchedEffect etc.
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
+// Remove specific remember states if they are now in ViewModel
+// import androidx.compose.runtime.getValue
+// import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -36,80 +40,60 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.mobileappproyect_android.R
-import com.example.mobileappproyect_android.ui.home.SubscriptionUiModel
+// import com.example.mobileappproyect_android.ui.home.SubscriptionUiModel // VM handles model creation
 import com.example.mobileappproyect_android.data.SubscriptionStatus
+import com.example.mobileappproyect_android.ui.home.HomeViewModel
 import com.example.mobileappproyect_android.ui.theme.MobileAppProyectAndroidTheme
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
+// import java.io.File // Handled by VM
+// import java.io.FileOutputStream // Handled by VM
+// import java.io.IOException // Handled by VM
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Calendar
-import java.util.UUID
+// import java.util.UUID // Handled by VM
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalPermissionsApi::class)
 @Composable
 fun EditSubscriptionScreen(
-    subscriptionToEdit: SubscriptionUiModel?,
-    onSaveSubscription: (SubscriptionUiModel) -> Unit,
-    onNavigateBack: () -> Unit
+    navController: NavController, // For navigation
+    editSubscriptionViewModel: EditSubscriptionViewModel // Injected
 ) {
-    val context = LocalContext.current
-    var name by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.name ?: "") }
-    var baseCostString by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.baseCost?.toString() ?: "") }
-    var baseCurrency by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.baseCurrency ?: "USD") }
-    val baseCurrencyOptions = listOf("USD", "EUR", "GBP", "JPY", "INR")
+    val context = LocalContext.current // Still needed for Toast, DatePickerDialog, Permission
 
-    var renewalDate by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.renewalDate ?: LocalDate.now()) }
-    var status by remember(subscriptionToEdit) { mutableStateOf(subscriptionToEdit?.status ?: SubscriptionStatus.ACTIVE) }
+    // States from ViewModel
+    val pageTitle = editSubscriptionViewModel.pageTitle
+    val name = editSubscriptionViewModel.name
+    val baseCostString = editSubscriptionViewModel.baseCostString
+    val baseCurrency = editSubscriptionViewModel.baseCurrency
+    val baseCurrencyOptions = editSubscriptionViewModel.baseCurrencyOptions
+    val renewalDate = editSubscriptionViewModel.renewalDate
+    val status = editSubscriptionViewModel.status
+    val currentImageSource = editSubscriptionViewModel.currentImageSource
+    val showDatePicker = editSubscriptionViewModel.showDatePicker
 
-    // tempImageUri will hold the temporary URI from the picker
-    var tempImageUri by remember { mutableStateOf<Uri?>(null) }
-
-    // currentImageSource will hold what AsyncImage should load
-    // It can be a Uri (for newly picked image) or a String (for existing file path or web URL)
-    var currentImageSource by remember(subscriptionToEdit?.imageUrl, tempImageUri) {
-        mutableStateOf<Any?>( // Type is Any? to accommodate Uri or String
-            tempImageUri ?: subscriptionToEdit?.imageUrl?.let {
-                // If the stored imageUrl is a content URI (old way, less likely now) or a file path
-                if (it.startsWith("content://") || it.startsWith("file://") || !it.contains("://")) {
-                    // Attempt to parse if it looks like a URI, otherwise assume it's a file path or needs to be treated as a File by Coil
-                    try {
-                        Uri.parse(it) // For content URIs or file URIs
-                    } catch (e: Exception) {
-                        it // If parsing fails, it might be a direct file path string or an http url
-                    }
-                } else {
-                    it // Assume http URL or other valid Coil input
-                }
-            }
-        )
-    }
-
-
-    var showDatePicker by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
-        uri?.let {
-            tempImageUri = it // Store the temporary URI from the picker
-            currentImageSource = it // Update display to show the newly picked image immediately
-        }
+        editSubscriptionViewModel.onTempImageUriReceived(uri)
     }
 
+    // Permission for image picking
     val readStoragePermission = if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
         Manifest.permission.READ_EXTERNAL_STORAGE
+    } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        Manifest.permission.READ_MEDIA_IMAGES // For Android 13+
     } else {
-        null
+        null // No specific permission needed for GetContent on Q, R, S if not using READ_EXTERNAL_STORAGE
     }
     val permissionState = readStoragePermission?.let { rememberPermissionState(permission = it) }
 
@@ -128,17 +112,13 @@ fun EditSubscriptionScreen(
     }
     val currentStatusLabel = subscriptionStatusOptions[status] ?: status.name
 
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = {
-                    Text(
-                        if (subscriptionToEdit != null) stringResource(R.string.edit_subscription_title_edit)
-                        else stringResource(R.string.edit_subscription_title_add)
-                    )
-                },
+                title = { Text(pageTitle) },
                 navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
+                    IconButton(onClick = { navController.popBackStack() }) { // Use NavController
                         Icon(
                             Icons.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.edit_subscription_back_description)
@@ -147,61 +127,15 @@ fun EditSubscriptionScreen(
                 },
                 actions = {
                     IconButton(onClick = {
-                        val baseCostValue = baseCostString.toDoubleOrNull()
-                        if (name.isNotBlank() && baseCostValue != null) {
-                            var finalImageUrl: String? = subscriptionToEdit?.imageUrl
-
-                            // If a new image was picked (tempImageUri is not null)
-                            if (tempImageUri != null) {
-                                val newFileName = "IMG_${UUID.randomUUID()}.jpg"
-                                val copiedImagePath = copyUriToInternalStorage(context, tempImageUri!!, newFileName)
-
-                                if (copiedImagePath != null) {
-                                    // If there was an old image, try to delete it from internal storage
-                                    subscriptionToEdit?.imageUrl?.let { oldPath ->
-                                        // Only delete if it's a file path and not an http URL
-                                        if (!oldPath.startsWith("http://") && !oldPath.startsWith("https://") && !oldPath.startsWith("content://")) {
-                                            try {
-                                                val oldFile = File(oldPath)
-                                                if (oldFile.exists() && oldFile.path.contains(context.filesDir.path)) { // Ensure it's in our app's dir
-                                                    oldFile.delete()
-                                                }
-                                            } catch (e: Exception) {
-                                                Log.e("EditScreen", "Failed to delete old image: $oldPath", e)
-                                            }
-                                        }
-                                    }
-                                    finalImageUrl = copiedImagePath
-                                } else {
-                                    Toast.makeText(
-                                        context,
-                                        context.getString(R.string.edit_subscription_error_saving_image), // Use a string resource
-                                        Toast.LENGTH_SHORT
-                                    ).show()
-                                    // Optionally, do not proceed if image saving fails
-                                    // return@IconButton // or handle differently
-                                }
+                        editSubscriptionViewModel.saveSubscription(
+                            onSuccess = {
+                                Toast.makeText(context, "Subscription saved!", Toast.LENGTH_SHORT).show()
+                                navController.popBackStack()
+                            },
+                            onError = { errorMessage ->
+                                Toast.makeText(context, errorMessage, Toast.LENGTH_LONG).show()
                             }
-
-                            val newOrUpdatedSubscriptionUiModel = SubscriptionUiModel(
-                                id = subscriptionToEdit?.id ?: "",
-                                name = name,
-                                imageUrl = finalImageUrl, // Use the new file path or existing/old one
-                                renewalDate = renewalDate,
-                                baseCost = baseCostValue,
-                                baseCurrency = baseCurrency,
-                                status = status,
-                                cost = baseCostValue,
-                                currencySymbol = baseCurrency
-                            )
-                            onSaveSubscription(newOrUpdatedSubscriptionUiModel)
-                        } else {
-                            Toast.makeText(
-                                context,
-                                context.getString(R.string.edit_subscription_error_fill_fields),
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        )
                     }) {
                         Icon(
                             Icons.Filled.Check,
@@ -234,14 +168,13 @@ fun EditSubscriptionScreen(
                     .align(Alignment.CenterHorizontally),
                 contentAlignment = Alignment.Center
             ) {
-                // Use currentImageSource for AsyncImage
                 if (currentImageSource != null) {
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(currentImageSource) // Load either temp Uri, file path, or web URL
+                            .data(currentImageSource)
                             .crossfade(true)
-                            .error(R.drawable.ic_placeholder_image)
-                            .placeholder(R.drawable.ic_placeholder_image) // Also good to have a placeholder
+                            .error(R.drawable.ic_placeholder_image) // Ensure this drawable exists
+                            .placeholder(R.drawable.ic_placeholder_image)
                             .build(),
                         contentDescription = stringResource(R.string.edit_subscription_image_description),
                         modifier = Modifier.fillMaxSize(),
@@ -267,22 +200,39 @@ fun EditSubscriptionScreen(
 
             OutlinedTextField(
                 value = name,
-                onValueChange = { name = it },
+                onValueChange = { editSubscriptionViewModel.onNameChange(it) },
                 label = { Text(stringResource(R.string.edit_subscription_label_name)) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
                 singleLine = true
             )
-            LaunchedEffect(Unit) {
-                if (subscriptionToEdit == null) focusRequester.requestFocus()
+            // Decide if you want to focus based on if it's new (ViewModel now knows via pageTitle or initialSubscriptionId)
+            val addTitle = stringResource(R.string.edit_subscription_title_add)
+
+            OutlinedTextField(
+                value = name,
+                onValueChange = { editSubscriptionViewModel.onNameChange(it) },
+                label = { Text(stringResource(R.string.edit_subscription_label_name)) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                singleLine = true
+            )
+
+            LaunchedEffect(pageTitle, addTitle) { // Add 'addTitle' to keys if it could change, though unlikely for resource strings
+                if (pageTitle == addTitle) {      // <<< USE THE VARIABLE HERE
+                    // Might need a delay for UI to be ready
+                    kotlinx.coroutines.delay(100) // Consider if this delay is always necessary
+                    focusRequester.requestFocus()
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
             OutlinedTextField(
                 value = baseCostString,
-                onValueChange = { baseCostString = it },
+                onValueChange = { editSubscriptionViewModel.onBaseCostChange(it) },
                 label = { Text(stringResource(R.string.edit_subscription_label_renewal_cost, baseCurrency)) },
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -299,7 +249,7 @@ fun EditSubscriptionScreen(
             ) {
                 OutlinedTextField(
                     value = baseCurrency,
-                    onValueChange = {},
+                    onValueChange = {}, // VM handles change
                     readOnly = true,
                     label = { Text(stringResource(R.string.edit_subscription_label_base_currency)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = baseCurrencyExpanded) },
@@ -315,7 +265,7 @@ fun EditSubscriptionScreen(
                         DropdownMenuItem(
                             text = { Text(selectionOption) },
                             onClick = {
-                                baseCurrency = selectionOption
+                                editSubscriptionViewModel.onBaseCurrencyChange(selectionOption)
                                 baseCurrencyExpanded = false
                             }
                         )
@@ -328,11 +278,11 @@ fun EditSubscriptionScreen(
             // Selector de Fecha de Renovación
             OutlinedTextField(
                 value = renewalDate.format(DateTimeFormatter.ISO_LOCAL_DATE),
-                onValueChange = { /* No se cambia directamente */ },
+                onValueChange = { /* Not directly changeable here */ },
                 label = { Text(stringResource(R.string.edit_subscription_label_renewal_date)) },
                 readOnly = true,
                 trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
+                    IconButton(onClick = { editSubscriptionViewModel.onShowDatePicker(true) }) {
                         Icon(
                             Icons.Filled.CalendarToday,
                             contentDescription = stringResource(R.string.edit_subscription_calendar_icon_description)
@@ -343,19 +293,20 @@ fun EditSubscriptionScreen(
             )
 
             if (showDatePicker) {
-                val calendar = Calendar.getInstance()
-                calendar.time = java.util.Date.from(renewalDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+                val calendar = Calendar.getInstance().apply {
+                    time = java.util.Date.from(renewalDate.atStartOfDay(ZoneId.systemDefault()).toInstant())
+                }
                 DatePickerDialog(
                     context,
                     { _, year, month, dayOfMonth ->
-                        renewalDate = LocalDate.of(year, month + 1, dayOfMonth)
-                        showDatePicker = false
+                        editSubscriptionViewModel.onRenewalDateChange(LocalDate.of(year, month + 1, dayOfMonth))
+                        editSubscriptionViewModel.onShowDatePicker(false)
                     },
                     calendar.get(Calendar.YEAR),
                     calendar.get(Calendar.MONTH),
                     calendar.get(Calendar.DAY_OF_MONTH)
                 ).apply {
-                    setOnDismissListener { showDatePicker = false }
+                    setOnDismissListener { editSubscriptionViewModel.onShowDatePicker(false) }
                     show()
                 }
             }
@@ -370,7 +321,7 @@ fun EditSubscriptionScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 OutlinedTextField(
-                    value = currentStatusLabel,
+                    value = currentStatusLabel, // Derived from VM's status
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.edit_subscription_label_status)) },
@@ -387,7 +338,7 @@ fun EditSubscriptionScreen(
                         DropdownMenuItem(
                             text = { Text(label) },
                             onClick = {
-                                status = statusEnum
+                                editSubscriptionViewModel.onStatusChange(statusEnum)
                                 statusExpanded = false
                             }
                         )
@@ -399,65 +350,61 @@ fun EditSubscriptionScreen(
     }
 }
 
-// Helper function to copy Uri content to internal storage
-private fun copyUriToInternalStorage(context: Context, uri: Uri, newFileName: String): String? {
-    try {
-        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
-        // Create a directory for subscription images if it doesn't exist
-        val directory = File(context.filesDir, "subscription_images")
-        if (!directory.exists()) {
-            directory.mkdirs()
-        }
-        val file = File(directory, newFileName)
-        val outputStream = FileOutputStream(file)
-        inputStream.use { input ->
-            outputStream.use { output ->
-                input.copyTo(output)
-            }
-        }
-        return file.absolutePath
-    } catch (e: IOException) {
-        Log.e("ImageCopy", "IOException: Error copying URI to internal storage", e)
-        return null
-    } catch (e: SecurityException) {
-        Log.e("ImageCopy", "SecurityException: Error copying URI to internal storage", e)
-        // This might happen if the URI is no longer valid or accessible
-        return null
-    }
-}
-
-// Preview
-@Preview(showBackground = true, name = "Edit Subscription Screen Light")
+// --- Previews will need to be updated to provide a mock/dummy ViewModel ---
+@Preview(showBackground = true, name = "Edit Subscription Screen Light (Add)")
 @Composable
-fun EditSubscriptionScreenPreview() {
+fun EditSubscriptionScreenAddPreview() {
     MobileAppProyectAndroidTheme {
+        // For preview, you'd ideally mock the HomeViewModel or provide a dummy one.
+        // This is a simplified approach for preview.
+        val dummyHomeViewModel = object : HomeViewModel(Application()) {
+            override suspend fun getSubscriptionById(id: String): com.example.mobileappproyect_android.ui.home.SubscriptionUiModel? = null
+            override fun addSubscription(subscription: com.example.mobileappproyect_android.ui.home.SubscriptionUiModel) {}
+            override fun updateSubscription(subscription: com.example.mobileappproyect_android.ui.home.SubscriptionUiModel) {}
+        }
+        val dummyApplication = LocalContext.current.applicationContext as Application
+
         EditSubscriptionScreen(
-            subscriptionToEdit = null,
-            onSaveSubscription = {},
-            onNavigateBack = {}
+            navController = NavController(LocalContext.current), // Dummy NavController for preview
+            editSubscriptionViewModel = EditSubscriptionViewModel(
+                app = dummyApplication,
+                homeViewModel = dummyHomeViewModel,
+                initialSubscriptionId = "new" // Or null for adding
+            )
         )
     }
 }
 
-@Preview(showBackground = true, name = "Edit Subscription Screen Dark - Editing")
+@Preview(showBackground = true, name = "Edit Subscription Screen Dark (Edit)")
 @Composable
 fun EditSubscriptionScreenEditPreview() {
     MobileAppProyectAndroidTheme(darkTheme = true) {
+        val dummyApplication = LocalContext.current.applicationContext as Application
+        val existingSub = com.example.mobileappproyect_android.ui.home.SubscriptionUiModel(
+            id = "preview-123",
+            name = "Netflix Preview",
+            baseCost = 15.99,
+            baseCurrency = "USD",
+            renewalDate = LocalDate.now().plusDays(10),
+            status = SubscriptionStatus.ACTIVE,
+            imageUrl = null, // or a placeholder R.drawable link if Coil can load it in preview
+            cost = 15.99,
+            currencySymbol = "$"
+        )
+        val dummyHomeViewModel = object : HomeViewModel(dummyApplication) {
+            override suspend fun getSubscriptionById(id: String): com.example.mobileappproyect_android.ui.home.SubscriptionUiModel? = if (id == "preview-123") existingSub else null
+            override fun addSubscription(subscription: com.example.mobileappproyect_android.ui.home.SubscriptionUiModel) {}
+            override fun updateSubscription(subscription: com.example.mobileappproyect_android.ui.home.SubscriptionUiModel) {}
+        }
+
+
         EditSubscriptionScreen(
-            subscriptionToEdit = SubscriptionUiModel(
-                id = "1",
-                name = "Sample Service UI",
-                // For preview, you might point to a drawable or keep null
-                imageUrl = null, // Or "file:///android_asset/some_image.png" if you add to assets
-                renewalDate = LocalDate.now().plusMonths(1),
-                baseCost = 9.99,
-                baseCurrency = "USD",
-                status = SubscriptionStatus.ACTIVE,
-                cost = 9.99,
-                currencySymbol = "$"
-            ),
-            onSaveSubscription = {},
-            onNavigateBack = {}
+            navController = NavController(LocalContext.current),
+            editSubscriptionViewModel = EditSubscriptionViewModel(
+                app = dummyApplication,
+                homeViewModel = dummyHomeViewModel,
+                initialSubscriptionId = "preview-123"
+            )
         )
     }
 }

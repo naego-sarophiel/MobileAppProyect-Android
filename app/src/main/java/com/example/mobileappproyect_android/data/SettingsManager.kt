@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
 // Define el DataStore a nivel de top-level (recomendado)
-val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
 class SettingsManager(context: Context) {
 
@@ -23,38 +23,38 @@ class SettingsManager(context: Context) {
     }
 
     // --- Theme ---
-    val uiThemeFlow: Flow<AppTheme> = appContext.dataStore.data
+    val uiThemeFlow: Flow<AppTheme> = appContext.settingsDataStore.data
         .map { preferences ->
             // AppTheme.fromKey ya no necesita displayName
             AppTheme.fromKey(preferences[UI_THEME_KEY] ?: AppTheme.SYSTEM.key)
         }
 
     suspend fun setUiTheme(theme: AppTheme) {
-        appContext.dataStore.edit { settings ->
+        appContext.settingsDataStore.edit { settings ->
             settings[UI_THEME_KEY] = theme.key
         }
     }
 
     // --- Currency ---
-    val currencyFlow: Flow<String> = appContext.dataStore.data
+    val currencyFlow: Flow<String> = appContext.settingsDataStore.data
         .map { preferences ->
             preferences[CURRENCY_KEY] ?: "€" // Default currency
         }
 
     suspend fun setCurrency(currencySymbol: String) {
-        appContext.dataStore.edit { settings ->
+        appContext.settingsDataStore.edit { settings ->
             settings[CURRENCY_KEY] = currencySymbol
         }
     }
 
     // --- Language ---
-    val languageFlow: Flow<String> = appContext.dataStore.data
+    val languageFlow: Flow<String> = appContext.settingsDataStore.data
         .map { preferences ->
             preferences[LANGUAGE_KEY] ?: "en" // Default language (Spanish, cambiar a "en" si prefieres inglés por defecto)
         }
 
     suspend fun setLanguage(languageCode: String) {
-        appContext.dataStore.edit { settings ->
+        appContext.settingsDataStore.edit { settings ->
             settings[LANGUAGE_KEY] = languageCode
         }
     }

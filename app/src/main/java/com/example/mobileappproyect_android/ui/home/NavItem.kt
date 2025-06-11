@@ -105,7 +105,7 @@ data class NavItem(
 @Composable
 fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel(),
-    onSubscriptionClick: (String) -> Unit, // Para editar/ver detalles
+    onSubscriptionClick: (SubscriptionUiModel) -> Unit, // Para editar/ver detalles
     onAddSubscriptionClick: () -> Unit,
     navController: NavController
 ) {
@@ -301,7 +301,7 @@ fun HomeScreen(
                         SubscriptionItem(
                             subscription = subscriptionUiModel, // Pass SubscriptionUiModel
                             isRenewalSoon = isSoon,
-                            onClick = { onSubscriptionClick(subscriptionUiModel.id) },
+                            onClick = { onSubscriptionClick(subscriptionUiModel) },
                             onDeleteClick = { subId ->
                                 subscriptionIdToDelete = subId
                                 showDeleteDialog = true
