@@ -210,16 +210,6 @@ fun EditSubscriptionScreen(
             // Decide if you want to focus based on if it's new (ViewModel now knows via pageTitle or initialSubscriptionId)
             val addTitle = stringResource(R.string.edit_subscription_title_add)
 
-            OutlinedTextField(
-                value = name,
-                onValueChange = { editSubscriptionViewModel.onNameChange(it) },
-                label = { Text(stringResource(R.string.edit_subscription_label_name)) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
-                singleLine = true
-            )
-
             LaunchedEffect(pageTitle, addTitle) { // Add 'addTitle' to keys if it could change, though unlikely for resource strings
                 if (pageTitle == addTitle) {      // <<< USE THE VARIABLE HERE
                     // Might need a delay for UI to be ready
